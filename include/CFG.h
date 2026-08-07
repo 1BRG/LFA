@@ -29,7 +29,7 @@ public:
 
     std::vector<std::string> generate(int max, int ct);
 
-    bool potential(const std::string & string, const std::string & tinta);
+    static bool potential(const std::string & string, const std::string & tinta);
 
     void dfsDer(const std::string &tinta, std::vector<std::string> &rez, std::string &curr, bool &isIn);
 

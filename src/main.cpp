@@ -186,7 +186,7 @@ void cfgOarecare() {
 
 int main()
 {
-    //tema3();
-    //bonusTema3();
-    cfgOarecare();
+    tema3();
+    bonusTema3();
+    //cfgOarecare();
 }
