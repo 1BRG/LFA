@@ -13,15 +13,15 @@ class Sigma
     static const int n = 2000, m = 50;
     bool ok = true;
 protected:
-    bool alfabet[257];
+    bool alphabet[257];
 public:
     Sigma& operator=(const Sigma& other);
     Sigma(const Sigma& other);
     Sigma () {}
     Sigma(char value);
     bool validSigma() const;
-    Sigma(const Input &citire);
-    bool apartineAlfabet(char ch) const;
+    Sigma(const Input &input);
+    bool belongsToAlphabet(char ch) const;
     friend ostream& operator<<(ostream& os, const Sigma &a);
     ~Sigma();
 

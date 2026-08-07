@@ -14,28 +14,28 @@ class CFG {
     std::map<char, std::vector <std::vector<char>>> prod;
     std::map<std::string, bool> temp;
     char start{NULL};
-    std::set<char> terminale, neterminale;
+    std::set<char> terminals, nonTerminals;
 public:
     CFG() = default;
     explicit CFG(std::string &filename);
 
-    int nrNonTerminale(const std::string &curr);
+    int numberOfNonTerminals(const std::string &current);
 
     static bool terminal(char c);
 
-    static int nrTerminale(const std::string & curr);
+    static int numberOfTerminals(const std::string &current);
 
-    void dfsGen(int maxLen, int maxCt, int &ct, std::vector<std::string> &rez, std::string curr);
+    void dfsGenerate(int maxLen, int maxCount, int &count, std::vector<std::string> &result, std::string current);
 
-    std::vector<std::string> generate(int max, int ct);
+    std::vector<std::string> generate(int max, int count);
 
-    static bool potential(const std::string & string, const std::string & tinta);
+    static bool potential(const std::string &input, const std::string &target);
 
-    void dfsDer(const std::string &tinta, std::vector<std::string> &rez, std::string &curr, bool &isIn);
+    void dfsDerivation(const std::string &target, std::vector<std::string> &result, std::string &current, bool &isFound);
 
-    std::vector<std::string> derivation(std::string tinta);
+    std::vector<std::string> derivation(std::string target);
 
-    bool recognize(std::string &tinta);
+    bool recognize(std::string &target);
 };
 
 

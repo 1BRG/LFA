@@ -5,30 +5,28 @@
 #include "../include/States.h"
 
 States &States::operator=(const States &other) {
-    // std::cout << "Operator egal\n";
     for (int i = 0; i < n; i++)
         this->final[i] = other.final[i];
     this->start = other.start;
     this->ok = other.ok;
     this->q = other.q;
-    this->nrNoduri = other.nrNoduri;
-
+    this->nodeCount = other.nodeCount;
     return *this;
 }
-States::States(char value):nrNoduri(2), start(1) {
+
+States::States(char value): nodeCount(2), start(1) {
     final[2] = true;
     q[to_string(1)] = 1;
     q[to_string(2)] = 2;
-    States a;
 }
+
 States::States(const States &other) {
-    //std::cout << "Constructor de Copiere\n";
     for (int i = 0; i < n; i++)
         this->final[i] = other.final[i];
     this->start = other.start;
     this->ok = other.ok;
     this->q = other.q;
-    this->nrNoduri = other.nrNoduri;
+    this->nodeCount = other.nodeCount;
 }
 
 States::States(int start, bool final1[]) {
@@ -38,39 +36,39 @@ States::States(int start, bool final1[]) {
         q[to_string(i)] = i;
 }
 
-States::States(const Input &citire) {
+States::States(const Input &input) {
     for (int i = 0; i < n; i++)
         final[i] = false;
-    string mat[n];
-    citire.Matrice(mat);
-    char s[m];
-    int ct = 0;
-    bool existaStart = false;
-    for (int i = citire.findState() + 1; true; i++) {
-        if (mat[i] == "End")
+    string matrix[n];
+    input.matrix(matrix);
+    char stateLine[m];
+    int count = 0;
+    bool hasStartState = false;
+    for (int i = input.findState() + 1; true; i++) {
+        if (matrix[i] == "End")
             break;
-        if (mat[i][0] == '#')
+        if (matrix[i][0] == '#')
             continue;
-        strcpy(s, mat[i].c_str());
-        char *p = strtok(s, ", ");
-        int nod;
-        int ct1 = 0;
+        strcpy(stateLine, matrix[i].c_str());
+        char *p = strtok(stateLine, ", ");
+        int node;
+        int stateIndex = 0;
         while (p) {
-            char cuv[m];
-            strcpy(cuv, p);
-            if (cuv[0] == 'S' && ct1 != 0) {
+            char word[m];
+            strcpy(word, p);
+            if (word[0] == 'S' && stateIndex != 0) {
                 if (start != 0)
                     ok = false;
-                else start = nod, existaStart = true;
-            } else if (cuv[0] == 'F' && ct1 != 0)
-                final[nod] = true;
+                else start = node, hasStartState = true;
+            } else if (word[0] == 'F' && stateIndex != 0)
+                final[node] = true;
             else
-                nod = q[cuv] != 0 ? q[cuv] : ++ct, q[cuv] = ct;
-            ct1 += 1;
+                node = q[word] != 0 ? q[word] : ++count, q[word] = count;
+            stateIndex += 1;
             p = strtok(NULL, ", ");
         }
     }
-    if (existaStart == 0)
+    if (!hasStartState)
         ok = false;
 }
 
@@ -78,83 +76,84 @@ bool States::validStates() const {
     return ok;
 }
 
-int States::translate(const string &nod) const {
-    map<string, int>::const_iterator it = q.find(nod);
+int States::translate(const string &node) const {
+    map<string, int>::const_iterator it = q.find(node);
     if (it != q.end())
         return it->second;
     else return -1;
 }
 
-bool States::stareFinala(int stare) const {
-    return final[stare];
+bool States::isFinalState(int state) const {
+    return final[state];
 }
 
-int States::nodStart() const {
+int States::startNode() const {
     return this->start;
 }
 
 ostream &operator<<(ostream &os, const States &a) {
-    os << "Despre States:\n";
+    os << "About states:\n";
     if (a.ok == false || (a.start == 0)) {
         os << "States invalid\n";
         return os;
     }
-    os << "Nod de start: " << a.start << "\n";
-    os << "Noduri de final: ";
-    int ct = 0;
+    os << "Start node: " << a.start << "\n";
+    os << "Final nodes: ";
+    int count = 0;
     for (int i = 0; i < States::n; i++)
         if (a.final[i])
-            os << i << " ", ct += 1;
-    if (!ct)
-        os << "Automatul nu are stari finale";
+            os << i << " ", count += 1;
+    if (!count)
+        os << "The automaton has no final states";
     os << "\n";
     return os;
 }
 
-void States::nNoduri(int nr) {
-     if (nrNoduri == 0)
-        nrNoduri = q.size();
-    nrNoduri += nr;
-}
-void States::changeStareInitiala(int i) {
-    start = 1;
+void States::updateNodeCount(int count) {
+    if (nodeCount == 0)
+        nodeCount = q.size();
+    nodeCount += count;
 }
 
+void States::changeInitialState(int state) {
+    start = state;
+}
 
 int States::size() {
-    nNoduri(0);
-    return nrNoduri;
+    updateNodeCount(0);
+    return nodeCount;
 }
 
-void States::increaseN(int n) {
+void States::increaseN(int count) {
     for (int i = this->n; i >= 0; i--) {
         if (final[i])
-            final[i + n] = 1;
+            final[i + count] = 1;
         final[i] = 0;
     }
-    start += n;
-    nNoduri(n);
-}
-vector<int> States::stareInitiala() {
-    vector <int> v;
-    v.push_back(start);
-    return v;
-}
-void States::changeStariFinale(const vector<int> &vector) {
-    for (int i = 0; i < n; i ++)
-        final[i] = 0;
-    for (auto nod: vector)
-        final[nod] = 1;
+    start += count;
+    updateNodeCount(count);
 }
 
-vector<int> States::stariFinale() {
-    vector<int> v;
+vector<int> States::initialStates() {
+    vector<int> states;
+    states.push_back(start);
+    return states;
+}
+
+void States::changeFinalStates(const vector<int> &states) {
+    for (int i = 0; i < n; i++)
+        final[i] = 0;
+    for (auto node: states)
+        final[node] = 1;
+}
+
+vector<int> States::finalStates() {
+    vector<int> states;
     for (int i = 0; i < n; i++)
         if (final[i])
-            v.push_back(i);
-    return v;
+            states.push_back(i);
+    return states;
 }
 
 States::~States() {
-    //cout << "Destructor";
 }

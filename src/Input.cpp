@@ -4,58 +4,58 @@
 
 #include "../include/Input.h"
 
+Input::Input(const string &filename) {
+    ifstream inputFile(filename);
+    int index = 0;
+    string line;
+    while (getline(inputFile, line)) {
+        if (index >= n)
+            break;
+        lines[index++] = line;
+    }
+}
 
-Input::Input(const string &filename)
-{
-    ifstream f(filename);
-    int ct = 0, i = 0;
-    while (getline(f, mat[++i]) && ct - 3)
-        ct += (mat[i] == "End");
-}
-int Input::findState() const
-{
-    for(int i = 0; true; i ++)
-        if(mat[i] == "States:")
+int Input::findState() const {
+    for (int i = 0; true; i++)
+        if (lines[i] == "States:")
             return i;
 }
-int Input::findTrans() const
-{
-    for(int i = 0; true; i ++)
-        if(mat[i] == "Transitions:")
+
+int Input::findTrans() const {
+    for (int i = 0; true; i++)
+        if (lines[i] == "Transitions:")
             return i;
 }
-int Input::findSigma() const
-{
-    for(int i = 0; true; i ++)
-        if(mat[i] == "Sigma:")
+
+int Input::findSigma() const {
+    for (int i = 0; true; i++)
+        if (lines[i] == "Sigma:")
             return i;
 }
-void Input::Matrice(string copie[]) const
-{
+
+void Input::matrix(string copy[]) const {
     for (int i = 0; i < n; i++)
-        copie[i] = mat[i];
+        copy[i] = lines[i];
 }
 
-ostream&  operator<<(ostream& os, const Input& a)
-{
-    os << "Despre input \n";
-    os << "States incepe la linia: " << a.findState() << "\n";
-    os << "Sigma incepe la linia: " << a.findSigma() << "\n";
-    os << "Transitions incepe la linia: " << a.findTrans() << "\n";
+ostream &operator<<(ostream &os, const Input &a) {
+    os << "About input\n";
+    os << "States begin at line: " << a.findState() << "\n";
+    os << "Sigma begins at line: " << a.findSigma() << "\n";
+    os << "Transitions begin at line: " << a.findTrans() << "\n";
     return os;
 }
-Input& Input:: operator=(const Input& other) {
-    // std::cout << "Operator egal\n";
-    for (int i = 0; i < n; i ++)
-        this->mat[i] = other.mat[i];
+
+Input &Input::operator=(const Input &other) {
+    for (int i = 0; i < n; i++)
+        this->lines[i] = other.lines[i];
     return *this;
 }
-Input::Input(const Input& other) {
-    //std::cout << "Constructor de Copiere\n";
-    for (int i = 0; i < n; i ++)
-        this->mat[i] = other.mat[i];
+
+Input::Input(const Input &other) {
+    for (int i = 0; i < n; i++)
+        this->lines[i] = other.lines[i];
 }
-Input::~Input()
-{
-    //cout << "Destructor";
+
+Input::~Input() {
 }

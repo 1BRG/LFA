@@ -17,8 +17,8 @@ class Automat
     Sigma A;
 
     bool ok = true;
-    void dfs(bool &valid, char cuv[], int stare, int poz, int len) const;
-    void returneaza_nfa(int nod, bool ok[], vector<nu> &aux, vector<nu> v[], bool &esteFinal);
+    void dfs(bool &valid, char word[], int state, int position, int length) const;
+    void returnNfa(int node, bool visited[], vector<TransitionNode> &aux, vector<TransitionNode> transitions[], bool &isFinal);
 public:
     Automat& operator=(const Automat& other);
     Automat(const Automat& other);
@@ -26,35 +26,35 @@ public:
     static Automat toAutomat(deque<string> p);
 
     Automat() = default;
-    explicit Automat(const Input &citire);
+    explicit Automat(const Input &input);
     Automat(const States &state, const Sigma &sigma, const Transitions &trans);
 
     explicit Automat(char value);
 
-    static void parsareRegex( string & regex);
+    static void parseRegex(string &regex);
 
-    static deque<string> postfixat(string &s);
+    static deque<string> postfixNotation(string &s);
 
     explicit Automat(string &regex);
 
-    bool apartine_automat(string &cuv);
+    bool belongsToAutomaton(string &word);
 
-    bool cuvant(char cuv[]);
+    bool acceptsWord(char word[]);
     bool isValid();
     bool isDFA() const;
     bool isNFA()const;
     void toDFA();
     friend ostream& operator<<(ostream& os, const Automat &a);
-    void concatenare(Automat &other);
-    void alternare(Automat &other);
-    void stelat();
+    void concatenate(Automat &other);
+    void alternate(Automat &other);
+    void star();
     void plus();
-    void misterios();
+    void optional();
     void increaseN(int n);
     void toNFA();
-    vector<nu> *get_transitions();
-    vector<int> stareInitiala();
-    vector <int> stariFinale();
+    vector<TransitionNode> *getTransitions();
+    vector<int> initialStates();
+    vector<int> finalStates();
     States s() const {
         return S;
     }

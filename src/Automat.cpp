@@ -4,37 +4,33 @@
 
 #include "../include/Automat.h"
 
-
-void Automat::dfs(bool &valid, char cuv[], int stare, int poz, int len) const {
+void Automat::dfs(bool &valid, char word[], int state, int position, int length) const {
     if (valid)
         return;
-    if (poz == len) {
-        if (S.stareFinala(stare))
+    if (position == length) {
+        if (S.isFinalState(state))
             valid = true;
-        for (int i = 0; i < T.Size(stare); i++) {
-            char ch = T.caracter(stare, i);
-            int nod = T.nod(stare, i);
+        for (int i = 0; i < T.size(state); i++) {
+            char ch = T.character(state, i);
+            int node = T.node(state, i);
             if (!valid && ch == '$')
-                dfs(valid, cuv, nod, poz, len);
+                dfs(valid, word, node, position, length);
         }
         return;
     }
-    for (int i = 0; i < T.Size(stare); i++) {
-        char ch = T.caracter(stare, i);
-        int nod = T.nod(stare, i);
-        if (!valid && (ch == cuv[poz]))
-            dfs(valid, cuv, nod, poz + 1, len);
+    for (int i = 0; i < T.size(state); i++) {
+        char ch = T.character(state, i);
+        int node = T.node(state, i);
+        if (!valid && (ch == word[position]))
+            dfs(valid, word, node, position + 1, length);
         else if (!valid && ch == '$')
-            dfs(valid, cuv, nod, poz, len);
+            dfs(valid, word, node, position, length);
     }
 }
 
-Automat::Automat(char value): A(value),  T(value), S(value){
-
-}
+Automat::Automat(char value): A(value), T(value), S(value) {}
 
 Automat &Automat::operator=(const Automat &other) {
-    // std::cout << "Operator egal\n";
     this->S = other.S;
     this->T = other.T;
     this->A = other.A;
@@ -43,167 +39,145 @@ Automat &Automat::operator=(const Automat &other) {
 }
 
 Automat::Automat(const Automat &other) {
-    //std::cout << "Constructor de Copiere\n";
     this->S = other.S;
     this->T = other.T;
     this->A = other.A;
     this->ok = other.ok;
 }
-void Automat::parsareRegex(string &regex) {
-        for (int i = 0; regex[i]; i ++) {
-            if (i != regex.length() - 1) {
-                if (!strchr("(|.", regex[i]) && !strchr("|*.+?)", regex[i + 1])) {
-                    regex.insert(regex.begin() + i + 1, '.');
-                }
+
+void Automat::parseRegex(string &regex) {
+    for (int i = 0; regex[i]; i++) {
+        if (i != regex.length() - 1) {
+            if (!strchr("(|.", regex[i]) && !strchr("|*.+?)", regex[i + 1])) {
+                regex.insert(regex.begin() + i + 1, '.');
             }
         }
+    }
 }
-deque <string> Automat::postfixat(string &s)
-{
+
+deque<string> Automat::postfixNotation(string &s) {
     map<string, int> prec;
     prec["+"] = prec["*"] = prec["?"] = 3;
     prec["."] = 2;
     prec["|"] = 1;
     prec["("] = -1;
-    long long nr = 0;
-    deque <string> rez, q;
-    for(int i = 0; s[i]; i ++)
-    {
-        if(s[i] <= '9' && s[i] >= '0')
-        {
-            while(s[i] <= '9' && s[i] >= '0')
-            {
-                nr = nr * 10 + s[i] - '0';
-                i ++;
+    long long number = 0;
+    deque<string> result, queue;
+    for (int i = 0; s[i]; i++) {
+        if (s[i] <= '9' && s[i] >= '0') {
+            while (s[i] <= '9' && s[i] >= '0') {
+                number = number * 10 + s[i] - '0';
+                i++;
             }
-            i --;
-            rez.push_back(to_string(nr));
-            nr = 0;
+            i--;
+            result.push_back(to_string(number));
+            number = 0;
         }
         else if (s[i] <= 'z' && s[i] >= 'a') {
-            rez.push_back(string(1, s[i]));
+            result.push_back(string(1, s[i]));
         }
-        else
-        {
+        else {
             string c;
             c += s[i];
-            if(s[i] == '(')
-                q.push_back(c);
-            else if(s[i] == ')')
-            {
-                while(q.back() != "(")
-                    rez.push_back(q.back()), q.pop_back();
-                q.pop_back();
-            }
-            else
-            {
-                while(!q.empty() && prec[c] <= prec[q.back()])
-                    rez.push_back(q.back()), q.pop_back();
-                q.push_back(c);
-            }
-        }
-    }
-    while(!q.empty())
-        rez.push_back(q.back()), q.pop_back();
-    return rez;
-}
-Automat :: Automat(string &regex) {
-    parsareRegex(regex);
-    deque <string> q = postfixat(regex);
-    *this = toAutomat(q);
-}
-bool Automat::apartine_automat(string &cuv) {
-    char c[2000];
-    strcpy(c, cuv.c_str());
-    return cuvant(c);
-}
-Automat Automat:: toAutomat(deque <string> p) {
-    /*
-     : . -> concatenare
-     : | -> alternare
-     : * -> stelat
-     : + -> plus
-     : ? -> misterios
-     */
-    deque <Automat> q;
-    while(!p.empty())
-    {
-        string c = p.front();
-        p.pop_front();
-        if((c[0] >= '0' && c[0] <= '9') || (c[0] <= 'z' && c[0] >= 'a')) {
-            Automat aux(c[0]);
-            q.push_back(aux);
-        }
-        else
-        {
-            Automat a2 = q.back(); q.pop_back();
-            if (c[0] == '.') {
-                Automat a1 = q.back(); q.pop_back();
-                a1.concatenare(a2);
-                q.push_back(a1);
-                //  cout << a1 << endl << "size:" << a1.s().size() << endl;
-            }
-            else if (c[0] == '|') {
-                Automat a1 = q.back(); q.pop_back();
-                a1.alternare(a2);
-                q.push_back(a1);
-                //    cout << a1 << endl << "size:" << a1.s().size() << endl;
-            }
-            else if (c[0] == '*') {
-                a2.stelat();
-                q.push_back(a2);
-                //              cout << a2 << endl << "size:"
-                //                << a2.s().size() << endl;
-            }
-            else if (c[0] == '+') {
-                a2.plus();
-                q.push_back(a2);
-                //cout << a2 << endl << "size:" << a2.s().size() << endl;
-            }
-            else if (c[0] == '?') {
-                a2.misterios();
-                q.push_back(a2);
-                //    cout << a2 << endl << "size:" << a2.s().size() << endl;
+            if (s[i] == '(')
+                queue.push_back(c);
+            else if (s[i] == ')') {
+                while (queue.back() != "(")
+                    result.push_back(queue.back()), queue.pop_back();
+                queue.pop_back();
             }
             else {
-                cout << "Nu trebuia ...\n";
+                while (!queue.empty() && prec[c] <= prec[queue.back()])
+                    result.push_back(queue.back()), queue.pop_back();
+                queue.push_back(c);
             }
         }
     }
-    return q.back();
+    while (!queue.empty())
+        result.push_back(queue.back()), queue.pop_back();
+    return result;
 }
-Automat::Automat(const Input &citire): S(citire), A(citire) {
-    T = Transitions{citire, S, A};
-    bool ok = true;
-    ok = ok & S.validStates() & A.validSigma() & T.validTransitions();
-    if (!ok)
-        cout << "Automat invalid\n", this->ok = false;
+
+Automat::Automat(string &regex) {
+    parseRegex(regex);
+    deque<string> q = postfixNotation(regex);
+    *this = toAutomat(q);
+}
+
+bool Automat::belongsToAutomaton(string &word) {
+    char c[2000];
+    strcpy(c, word.c_str());
+    return acceptsWord(c);
+}
+
+Automat Automat::toAutomat(deque<string> p) {
+    deque<Automat> queue;
+    while (!p.empty()) {
+        string c = p.front();
+        p.pop_front();
+        if ((c[0] >= '0' && c[0] <= '9') || (c[0] <= 'z' && c[0] >= 'a')) {
+            Automat aux(c[0]);
+            queue.push_back(aux);
+        }
+        else {
+            Automat second = queue.back();
+            queue.pop_back();
+            if (c[0] == '.') {
+                Automat first = queue.back();
+                queue.pop_back();
+                first.concatenate(second);
+                queue.push_back(first);
+            }
+            else if (c[0] == '|') {
+                Automat first = queue.back();
+                queue.pop_back();
+                first.alternate(second);
+                queue.push_back(first);
+            }
+            else if (c[0] == '*') {
+                second.star();
+                queue.push_back(second);
+            }
+            else if (c[0] == '+') {
+                second.plus();
+                queue.push_back(second);
+            }
+            else if (c[0] == '?') {
+                second.optional();
+                queue.push_back(second);
+            }
+            else {
+                cout << "Unexpected operator.\n";
+            }
+        }
+    }
+    return queue.back();
+}
+
+Automat::Automat(const Input &input): S(input), A(input) {
+    T = Transitions{input, S, A};
+    bool isValid = true;
+    isValid = isValid & S.validStates() & A.validSigma() & T.validTransitions();
+    if (!isValid)
+        cout << "Automaton is invalid\n", this->ok = false;
 }
 
 Automat::Automat(const States &state, const Sigma &sigma, const Transitions &trans): S(state), T(trans), A(sigma) {
-    bool ok = true;
-    ok = ok & state.validStates() & sigma.validSigma() & trans.validTransitions();
-    if (!ok)
-        cout << "Automat invalid\n", this->ok = false;
+    bool isValid = true;
+    isValid = isValid & state.validStates() & sigma.validSigma() & trans.validTransitions();
+    if (!isValid)
+        cout << "Automaton is invalid\n", this->ok = false;
 }
 
-bool Automat::cuvant(char cuv[]) {
+bool Automat::acceptsWord(char word[]) {
     bool valid = false;
-    dfs(valid, cuv, S.nodStart(), 0, strlen(cuv));
+    dfs(valid, word, S.startNode(), 0, strlen(word));
     return valid;
 }
 
-bool Automat::isValid() {
-    return ok;
-}
-
-bool Automat::isDFA() const {
-    return T.isDFA();
-}
-
-bool Automat::isNFA() const {
-    return T.isNFA();
-}
+bool Automat::isValid() { return ok; }
+bool Automat::isDFA() const { return T.isDFA(); }
+bool Automat::isNFA() const { return T.isNFA(); }
 
 void Automat::toDFA() {
     toNFA();
@@ -212,217 +186,172 @@ void Automat::toDFA() {
     bool auxf[n];
     for (int i = 0; i < n; i++)
         auxf[i] = 0;
-    auxf[S.nodStart()] = S.stareFinala(S.nodStart());
-    vector<nu> aux[n];
+    auxf[S.startNode()] = S.isFinalState(S.startNode());
+    vector<TransitionNode> aux[n];
     map<char, set<int> > w[n];
     T.getTransition(w);
 
-
-    // hash pentru un set de noduri
     map<long long, map<char, set<int> > > hash;
-    // daca hash a mai fost vizitat
-    map<long long, bool> viz;
-    // map<long long, bool> viz1;
-    // din hash in nod
-    map<long long, int> trad;
+    map<long long, bool> visited;
+    map<long long, int> translation;
 
-    const int b = 5009, mod = 1e9 + 7;
-    int ct = 0;
+    const int base = 5009, mod = 1e9 + 7;
+    int count = 0;
     deque<long long> q;
-    q.push_back(S.nodStart());
+    q.push_back(S.startNode());
 
     for (int i = 0; i < n; i++) {
         if (!w[i].empty())
             hash[i] = w[i], w[i].clear();
     }
 
-    hash[S.nodStart()][1].insert(S.nodStart());
-    trad[S.nodStart()] = ++ct;
-    /*
-    for (map<char, set<int>> :: iterator j = hash[3].begin(); j != hash[3].end(); j ++) {
-        cout << j->first << ":   ";
-        for (set<int>:: iterator p = j->second.begin(); p != j->second.end(); p ++) {
-            cout << *p << " ";
-            ok = ok | S.stareFinala(*p);
-        }
-        cout << "\n";
-    }
-    */
+    hash[S.startNode()][1].insert(S.startNode());
+    translation[S.startNode()] = ++count;
+
     while (!q.empty()) {
-        int nod = q.front();
+        int node = q.front();
         q.pop_front();
-
-
-        /*
-                        cout << "Componeneta nodului " << nod << ":\n";
-                        bool ok = false;
-                        for (map<char, set<int>> :: iterator j = hash[nod].begin(); j != hash[nod].end(); j ++) {
-                            cout << j->first << ":   ";
-                            for (set<int>:: iterator p = j->second.begin(); p != j->second.end(); p ++) {
-                                cout << *p << " ";
-                                ok = ok | S.stareFinala(*p);
-                            }
-                            cout << "\n";
-                            break;
-                        }
-
-        */
-        viz[nod] = true;
-        map<char, set<int> > dest;
-        for (set<int>::iterator i = hash[nod][1].begin(); i != hash[nod][1].end(); i++)
+        visited[node] = true;
+        map<char, set<int> > destination;
+        for (set<int>::iterator i = hash[node][1].begin(); i != hash[node][1].end(); i++)
             for (map<char, set<int> >::iterator j = hash[*i].begin(); j != hash[*i].end(); j++) {
                 if (j->first != 1)
-                    dest[j->first].insert(j->second.begin(), j->second.end());
+                    destination[j->first].insert(j->second.begin(), j->second.end());
             }
-        for (map<char, set<int> >::iterator i = dest.begin(); i != dest.end(); i++) {
-            long long node = 0;
-            bool ok = 0;
+        for (map<char, set<int> >::iterator i = destination.begin(); i != destination.end(); i++) {
+            long long state = 0;
+            bool isFinal = false;
             for (set<int>::iterator j = i->second.begin(); j != i->second.end(); j++) {
-                ok = ok | S.stareFinala(*j);
-                node *= b, node += *j, node %= mod;
+                isFinal = isFinal | S.isFinalState(*j);
+                state *= base, state += *j, state %= mod;
             }
-            //   if (i->second.size() > 1) {
-            node += n + 1;
-            // }
-            //  else if (i->second.size() == 0)
-            //    continue;
-            if (viz[node] == 0) {
-                hash[node][1].insert(dest[i->first].begin(), dest[i->first].end());
-                hash[nod][i->first] = dest[i->first];
-                viz[node] = 1;
-                q.push_back(node);
-                trad[node] = ++ct;
-                aux[trad[nod]].push_back({ct, i->first});
-                // auxf[ct] = ok;
+            state += n + 1;
+            if (visited[state] == 0) {
+                hash[state][1].insert(destination[i->first].begin(), destination[i->first].end());
+                hash[node][i->first] = destination[i->first];
+                visited[state] = 1;
+                q.push_back(state);
+                translation[state] = ++count;
+                aux[translation[node]].push_back({count, i->first});
             } else {
-                aux[trad[nod]].push_back({trad[node], i->first});
-                hash[node][i->first] = dest[i->first];
+                aux[translation[node]].push_back({translation[state], i->first});
+                hash[state][i->first] = destination[i->first];
             }
         }
     }
-    for (map<long long, int>::iterator i = trad.begin(); i != trad.end(); i++) {
-        cout << "Componeneta nodului " << i->second << ":\n";
-        bool ok = false;
+    for (map<long long, int>::iterator i = translation.begin(); i != translation.end(); i++) {
+        cout << "Component of node " << i->second << ":\n";
+        bool isFinal = false;
         for (map<char, set<int> >::iterator j = hash[i->first].begin(); j != hash[i->first].end(); j++) {
             cout << j->first << ":   ";
             for (set<int>::iterator p = j->second.begin(); p != j->second.end(); p++) {
                 cout << *p << " ";
-                ok = ok | S.stareFinala(*p);
+                isFinal = isFinal | S.isFinalState(*p);
             }
-            auxf[i->second] = ok;
-            cout << ((ok == 1) ? "final" : "") << "\n";
+            auxf[i->second] = isFinal;
+            cout << ((isFinal == 1) ? "final" : "") << "\n";
             break;
-            cout << "\n";
         }
         cout << "\n";
     }
     S = {States{1, auxf}};
-    T.modificareTrans(aux);
+    T.modifyTransitions(aux);
 }
 
 ostream &operator<<(ostream &os, const Automat &a) {
-    os << "Despre Automat: \n";
-    os << a.S << "\n"
-    //<< a.A << "\n"
-    << a.T << "\n";
+    os << "About the automaton: \n";
+    os << a.S << "\n" << a.T << "\n";
     return os;
 }
-void Automat::returneaza_nfa(int nod, bool ok[], vector<nu> &aux, vector<nu> v[], bool &esteFinal) {
-    ok[nod] = true;
-    if (S.stareFinala(nod))
-        esteFinal = true;
-    for (int i = 0; i < v[nod].size(); i ++)
-        if (ok[v[nod][i].nod] == false) {
-            if (v[nod][i].a != '$')
-                ok[v[nod][i].nod] = true, aux.push_back(v[nod][i]);
-            else returneaza_nfa(v[nod][i].nod, ok, aux, v, esteFinal);
+
+void Automat::returnNfa(int node, bool visited[], vector<TransitionNode> &aux, vector<TransitionNode> transitions[], bool &isFinal) {
+    visited[node] = true;
+    if (S.isFinalState(node))
+        isFinal = true;
+    for (int i = 0; i < transitions[node].size(); i++)
+        if (visited[transitions[node][i].node] == false) {
+            if (transitions[node][i].symbol != '$') {
+                visited[transitions[node][i].node] = true;
+                aux.push_back(transitions[node][i]);
+            }
+            else {
+                returnNfa(transitions[node][i].node, visited, aux, transitions, isFinal);
+            }
         }
-        else if (v[nod][i].a != '$')
-        ok[v[nod][i].nod] = false, aux.push_back(v[nod][i]);
+        else if (transitions[node][i].symbol != '$') {
+            visited[transitions[node][i].node] = false;
+            aux.push_back(transitions[node][i]);
+        }
 }
+
 void Automat::toNFA() {
-    vector<nu> *v, nou[n];
-    vector <int> final;
-    v = T.get_transitions();
-    bool ok[n] = {false};
-    for (int i = 0; i < n; i ++) {
-        bool esteFinal = false;
-        memset(ok, 0, sizeof(ok));
-        vector <nu> aux;
-        returneaza_nfa(i, ok, aux, v, esteFinal);
-        nou[i] = aux;
-        if (esteFinal)
-            final.push_back(i);
+    vector<TransitionNode> *transitions;
+    vector<TransitionNode> newTransitions[n];
+    vector<int> finalStates;
+    transitions = T.getTransitions();
+    bool visited[n] = {false};
+    for (int i = 0; i < n; i++) {
+        bool isFinal = false;
+        memset(visited, 0, sizeof(visited));
+        vector<TransitionNode> aux;
+        returnNfa(i, visited, aux, transitions, isFinal);
+        newTransitions[i] = aux;
+        if (isFinal)
+            finalStates.push_back(i);
     }
-    T.modificareTrans(nou);
-    S.changeStariFinale(final);
+    T.modifyTransitions(newTransitions);
+    S.changeFinalStates(finalStates);
 }
 
+void Automat::increaseN(int n) { T.increaseN(n); S.increaseN(n); }
+vector<TransitionNode> *Automat::getTransitions() { return T.getTransitions(); }
+vector<int> Automat::initialStates() { return S.initialStates(); }
+vector<int> Automat::finalStates() { return S.finalStates(); }
 
-void Automat::increaseN(int n) {
-    T.increaseN(n);
-    S.increaseN(n);
-}
-
-vector<nu> *Automat::get_transitions() {
-    return T.get_transitions();
-}
-
-vector<int> Automat::stareInitiala() {
-    return S.stareInitiala();
-}
-vector<int> Automat::stariFinale() {
-    return S.stariFinale();
-}
-void Automat::concatenare(Automat &other) {
+void Automat::concatenate(Automat &other) {
     other.increaseN(S.size());
-    T.addTransitions(other.get_transitions());
-    T.addTransitions(S.stariFinale(), other.stareInitiala());
-    S.changeStariFinale(other.stariFinale());
-    S.nNoduri(other.s().size() - S.size());
+    T.addTransitions(other.getTransitions());
+    T.addTransitions(S.finalStates(), other.initialStates());
+    S.changeFinalStates(other.finalStates());
+    S.updateNodeCount(other.s().size() - S.size());
 }
 
-void Automat::alternare(Automat &other) {
+void Automat::alternate(Automat &other) {
     increaseN(1);
     other.increaseN(S.size());
-    T.addTransitions(other.get_transitions());
-    T.addTransitions({1}, {S.stareInitiala()[0], other.stareInitiala()[0]});
-    S.changeStareInitiala(1);
-    vector <int> v = S.stariFinale();
-    vector <int> p = other.stariFinale();
-    for (int i = 0; i < p.size(); i ++)
+    T.addTransitions(other.getTransitions());
+    T.addTransitions({1}, {S.initialStates()[0], other.initialStates()[0]});
+    S.changeInitialState(1);
+    vector<int> v = S.finalStates();
+    vector<int> p = other.finalStates();
+    for (int i = 0; i < p.size(); i++)
         v.push_back(p[i]);
-    S.changeStariFinale(v);
-    S.nNoduri(other.s().size() - S.size());
+    S.changeFinalStates(v);
+    S.updateNodeCount(other.s().size() - S.size());
 }
 
-void Automat::stelat() {
+void Automat::star() {
     increaseN(1);
-    T.addTransitions(S.stariFinale(), {1});
-    T.addTransitions({1}, S.stareInitiala());
-    S.changeStariFinale({1});
-    S.changeStareInitiala({1});
-   // S.nNoduri(1);
+    T.addTransitions(S.finalStates(), {1});
+    T.addTransitions({1}, S.initialStates());
+    S.changeFinalStates({1});
+    S.changeInitialState(1);
 }
+
 void Automat::plus() {
     increaseN(1);
-    T.addTransitions(S.stariFinale(), {1});
-    T.addTransitions({1}, S.stareInitiala());
-  //  S.changeStariFinale({1});
-    S.changeStareInitiala({1});
-  //  S.nNoduri(1);
+    T.addTransitions(S.finalStates(), {1});
+    T.addTransitions({1}, S.initialStates());
+    S.changeInitialState(1);
 }
-void Automat::misterios() {
+
+void Automat::optional() {
     increaseN(1);
-    T.addTransitions({1}, S.stareInitiala());
-    vector <int> v = S.stariFinale();
+    T.addTransitions({1}, S.initialStates());
+    vector<int> v = S.finalStates();
     v.push_back(1);
-    S.changeStariFinale(v);
-    S.changeStareInitiala({1});
+    S.changeFinalStates(v);
+    S.changeInitialState(1);
 }
 
-
-
-Automat::~Automat() {
-    //cout << "Destructor";
-}
+Automat::~Automat() {}

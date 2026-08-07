@@ -17,31 +17,31 @@ class States
     static const int n = 2000, m = 50;
     bool ok = true;
     map<string, int> q;
-    int nrNoduri = 0;
+    int nodeCount = 0;
 protected:
     int start = 0;
     bool final[n] = {false};
 public:
     States& operator=(const States& other);
 
-    vector<int> stareInitiala();
+    vector<int> initialStates();
 
-    void changeStariFinale(const vector<int> & vector);
+    void changeFinalStates(const vector<int> &states);
 
-    void changeStareInitiala(int i);
+    void changeInitialState(int state);
     explicit States(char value);
     States(const States& other);
     States() = default;
     States(int start, bool final1[]);
-    States(const Input& citire);
+    States(const Input& input);
     bool validStates() const;
-    int translate(const string& nod) const;
-    bool stareFinala(int stare) const;
-    int nodStart() const;
+    int translate(const string& node) const;
+    bool isFinalState(int state) const;
+    int startNode() const;
     friend ostream& operator<<(ostream& os, const States &a);
-    void nNoduri(int nr);
+    void updateNodeCount(int count);
     int size();
-    vector <int> stariFinale();
+    vector<int> finalStates();
     void increaseN(int n);
     ~States();
 };

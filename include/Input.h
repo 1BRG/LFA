@@ -13,7 +13,7 @@ using namespace std;
 class Input
 {
     static const int n = 2000, m = 50;
-    string mat[n];
+    string lines[n];
     ///bool ok = true;
 public:
     Input() = default;
@@ -22,7 +22,7 @@ public:
     int findState() const;
     int findTrans() const;
     int findSigma() const;
-    void Matrice(string copie[]) const;
+    void matrix(string copy[]) const;
     friend ostream& operator<<(ostream& os, const Input& a);
     Input& operator=(const Input& other);
     Input(const Input& other);
