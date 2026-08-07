@@ -4,6 +4,8 @@
 
 #include "../include/Input.h"
 
+// --- Constructors, Destructor, and Assignment ---
+
 Input::Input(const std::string &filename) {
     std::ifstream inputFile(filename);
     int currentIndex = 0;
@@ -16,6 +18,25 @@ Input::Input(const std::string &filename) {
         lines[currentIndex++] = line;
     }
 }
+
+Input::Input(const Input &other) {
+    for (int index = 0; index < kLineCount; ++index) {
+        this->lines[index] = other.lines[index];
+    }
+}
+
+Input &Input::operator=(const Input &other) {
+    if (this != &other) {
+        for (int index = 0; index < kLineCount; ++index) {
+            this->lines[index] = other.lines[index];
+        }
+    }
+    return *this;
+}
+
+Input::~Input() = default;
+
+// --- Core API / Getters ---
 
 int Input::findState() const {
     for (int index = 0; true; ++index) {
@@ -47,6 +68,8 @@ void Input::matrix(std::string copy[]) const {
     }
 }
 
+// --- Operator Overloads ---
+
 std::ostream &operator<<(std::ostream &output, const Input &input) {
     output << "About input\n";
     output << "States begin at line: " << input.findState() << "\n";
@@ -54,18 +77,3 @@ std::ostream &operator<<(std::ostream &output, const Input &input) {
     output << "Transitions begin at line: " << input.findTrans() << "\n";
     return output;
 }
-
-Input &Input::operator=(const Input &other) {
-    for (int index = 0; index < kLineCount; ++index) {
-        this->lines[index] = other.lines[index];
-    }
-    return *this;
-}
-
-Input::Input(const Input &other) {
-    for (int index = 0; index < kLineCount; ++index) {
-        this->lines[index] = other.lines[index];
-    }
-}
-
-Input::~Input() = default;

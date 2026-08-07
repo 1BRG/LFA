@@ -9,6 +9,11 @@
 #include <fstream>
 #include <iostream>
 
+// Global output stream for derivations
+std::ofstream output("output.txt");
+
+// --- Constructors ---
+
 CFG::CFG(std::string &filename) {
     std::ifstream file(filename.c_str());
     char line[205];
@@ -71,29 +76,47 @@ CFG::CFG(std::string &filename) {
     }
 }
 
-int CFG::numberOfNonTerminals(const std::string &current) {
-    int count = 0;
-    for (char symbol : current) {
-        if (!terminal(symbol)) {
-            ++count;
-        }
-    }
-    return count;
+// --- Core API / Operations ---
+
+std::vector<std::string> CFG::generate(int maxLen, int maxCount) {
+    std::vector<std::string> result;
+    int total = 0;
+    std::string current;
+    current += start;
+
+    generateFromCurrent(maxLen, maxCount, total, result, current);
+    visitedStates.clear();
+    return result;
 }
 
-bool CFG::terminal(char symbol) {
-    return !(symbol <= 'Z' && symbol >= 'A');
+std::vector<std::string> CFG::derivation(const std::string& target) {
+    std::vector<std::string> result;
+    bool isFound = false;
+    std::string current;
+    current += start;
+
+    result.push_back(current);
+    deriveFromCurrent(target, result, current, isFound);
+    visitedStates.clear();
+
+    if (!isFound) {
+        return {"Empty"};
+    }
+    return result;
 }
 
-int CFG::numberOfTerminals(const std::string &current) {
-    int count = 0;
-    for (int index = 0; current[index]; ++index) {
-        if (terminal(current[index])) {
-            ++count;
-        }
-    }
-    return count;
+bool CFG::recognize(const std::string &target) {
+    std::vector<std::string> result;
+    bool isFound = false;
+    std::string current;
+    current += start;
+
+    deriveFromCurrent(target, result, current, isFound);
+    visitedStates.clear();
+    return isFound;
 }
+
+// --- Recursive Helpers ---
 
 void CFG::generateFromCurrent(int maxLen, int maxCount, int &count,
                               std::vector<std::string> &result,
@@ -140,59 +163,6 @@ void CFG::generateFromCurrent(int maxLen, int maxCount, int &count,
         }
     }
 }
-
-std::vector<std::string> CFG::generate(int maxLen, int maxCount) {
-    std::vector<std::string> result;
-    int total = 0;
-    std::string current;
-    current += start;
-
-    generateFromCurrent(maxLen, maxCount, total, result, current);
-    visitedStates.clear();
-    return result;
-}
-
-bool CFG::potential(const std::string &input, const std::string &target) {
-    std::string pattern;
-    for (auto symbol : input) {
-        if (terminal(symbol)) {
-            pattern += symbol;
-        } else {
-            pattern += '*';
-        }
-    }
-
-    const int targetLength = target.size();
-    const int patternLength = pattern.size();
-    int index = 0;
-    int patternIndex = 0;
-    int lastMatch = -1;
-    int matchPosition = 0;
-
-    while (index < targetLength) {
-        if (patternIndex < patternLength && pattern[patternIndex] == target[index]) {
-            ++index;
-            ++patternIndex;
-        } else if (patternIndex < patternLength && pattern[patternIndex] == '*') {
-            lastMatch = patternIndex;
-            matchPosition = index;
-            ++patternIndex;
-        } else if (lastMatch != -1) {
-            patternIndex = lastMatch + 1;
-            ++matchPosition;
-            index = matchPosition;
-        } else {
-            return false;
-        }
-    }
-
-    while (patternIndex < patternLength && pattern[patternIndex] == '*') {
-        ++patternIndex;
-    }
-    return patternIndex == patternLength;
-}
-
-std::ofstream output("output.txt");
 
 void CFG::deriveFromCurrent(const std::string &target,
                             std::vector<std::string> &result,
@@ -248,30 +218,68 @@ void CFG::deriveFromCurrent(const std::string &target,
     }
 }
 
-std::vector<std::string> CFG::derivation(const std::string& target) {
-    std::vector<std::string> result;
-    bool isFound = false;
-    std::string current;
-    current += start;
+// --- Static Helper Methods ---
 
-    result.push_back(current);
-    deriveFromCurrent(target, result, current, isFound);
-    visitedStates.clear();
+bool CFG::terminal(char symbol) {
+    return !(symbol <= 'Z' && symbol >= 'A');
+}
 
-    if (!isFound) {
-        return {"Empty"};
+int CFG::numberOfNonTerminals(const std::string &current) {
+    int count = 0;
+    for (char symbol : current) {
+        if (!terminal(symbol)) {
+            ++count;
+        }
     }
-    return result;
+    return count;
 }
 
-bool CFG::recognize(const std::string &target) {
-    std::vector<std::string> result;
-    bool isFound = false;
-    std::string current;
-    current += start;
-
-    deriveFromCurrent(target, result, current, isFound);
-    visitedStates.clear();
-    return isFound;
+int CFG::numberOfTerminals(const std::string &current) {
+    int count = 0;
+    for (int index = 0; current[index]; ++index) {
+        if (terminal(current[index])) {
+            ++count;
+        }
+    }
+    return count;
 }
 
+bool CFG::potential(const std::string &input, const std::string &target) {
+    std::string pattern;
+    for (auto symbol : input) {
+        if (terminal(symbol)) {
+            pattern += symbol;
+        } else {
+            pattern += '*';
+        }
+    }
+
+    const int targetLength = target.size();
+    const int patternLength = pattern.size();
+    int index = 0;
+    int patternIndex = 0;
+    int lastMatch = -1;
+    int matchPosition = 0;
+
+    while (index < targetLength) {
+        if (patternIndex < patternLength && pattern[patternIndex] == target[index]) {
+            ++index;
+            ++patternIndex;
+        } else if (patternIndex < patternLength && pattern[patternIndex] == '*') {
+            lastMatch = patternIndex;
+            matchPosition = index;
+            ++patternIndex;
+        } else if (lastMatch != -1) {
+            patternIndex = lastMatch + 1;
+            ++matchPosition;
+            index = matchPosition;
+        } else {
+            return false;
+        }
+    }
+
+    while (patternIndex < patternLength && pattern[patternIndex] == '*') {
+        ++patternIndex;
+    }
+    return patternIndex == patternLength;
+}

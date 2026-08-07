@@ -14,11 +14,14 @@
 using namespace std;
 using json = nlohmann::json;
 
-char inputWordBuffer[50];
 
+// ==========================================
+// Task 1: Automaton and DFA Conversion
+// ==========================================
 void task1() {
     const int size = 2000;
     char inputBuffer[size];
+    char inputWordBuffer[50]; 
     Automat firstAutomaton;
     Automat secondAutomaton;
 
@@ -49,6 +52,10 @@ void task1() {
     }
 }
 
+
+// ==========================================
+// Task 2: Regex to DFA and JSON Testing
+// ==========================================
 void task2() {
     ifstream file("../src/LFA-Assignment2_Regex_DFA.json");
     auto data = json::parse(file);
@@ -78,6 +85,10 @@ void task2() {
     }
 }
 
+
+// ==========================================
+// Task 3: Context-Free Grammar Processing
+// ==========================================
 void task3() {
     string filename = "../src/aSb.in";
     ifstream file(filename);
@@ -115,6 +126,10 @@ void task3() {
     cout << "\n";
 }
 
+
+// ==========================================
+// Bonus Task 3: Non-Context-Free Grammar
+// ==========================================
 void bonusTask3() {
     string filename = "../src/aNbNcN.in";
     ifstream file(filename);
@@ -201,6 +216,10 @@ void bonusTask3() {
     }
 }
 
+
+// ==========================================
+// Custom CFG Entry point
+// ==========================================
 void cfgAny() {
     string inputLine;
     string filename = "../src/CFG.in";
@@ -238,9 +257,15 @@ void cfgAny() {
     }
 }
 
+
+// ==========================================
+// Main Entry Point
+// ==========================================
 int main() {
     task3();
     bonusTask3();
     // cfgAny();
     task1();
+
+    return 0;
 }

@@ -5,6 +5,9 @@
 #include "../include/Automat.h"
 
 #include <cstring>
+#include <iostream>
+
+// --- Private Helper Methods ---
 
 void Automat::dfs(bool &isValid, char inputWord[], int currentState, int currentPosition, int wordLength) const {
     if (isValid) {
@@ -37,14 +40,56 @@ void Automat::dfs(bool &isValid, char inputWord[], int currentState, int current
     }
 }
 
+void Automat::returnNfa(int node, bool visited[], std::vector<TransitionNode> &aux,
+                        std::vector<TransitionNode> transitions[], bool &isFinal) {
+    visited[node] = true;
+    if (stateMachine.isFinalState(node)) {
+        isFinal = true;
+    }
+
+    for (int index = 0; index < transitions[node].size(); ++index) {
+        if (visited[transitions[node][index].node] == false) {
+            if (transitions[node][index].symbol != '$') {
+                visited[transitions[node][index].node] = true;
+                aux.push_back(transitions[node][index]);
+            } else {
+                returnNfa(transitions[node][index].node, visited, aux, transitions, isFinal);
+            }
+        } else if (transitions[node][index].symbol != '$') {
+            visited[transitions[node][index].node] = false;
+            aux.push_back(transitions[node][index]);
+        }
+    }
+}
+
+// --- Constructors, Destructor, and Assignment ---
+
 Automat::Automat(char value) : stateMachine(value), transitions(value), alphabet(value) {}
 
-Automat &Automat::operator=(const Automat &other) {
-    this->stateMachine = other.stateMachine;
-    this->transitions = other.transitions;
-    this->alphabet = other.alphabet;
-    this->ok = other.ok;
-    return *this;
+Automat::Automat(const Input &input) : stateMachine(input), alphabet(input) {
+    transitions = Transitions{input, stateMachine, alphabet};
+    bool isValidFlag = true;
+    isValidFlag = isValidFlag & stateMachine.validStates() & alphabet.validSigma() & transitions.validTransitions();
+    if (!isValidFlag) {
+        std::cout << "Automaton is invalid\n";
+        this->ok = false;
+    }
+}
+
+Automat::Automat(std::string &regex) {
+    parseRegex(regex);
+    std::deque<std::string> tokens = postfixNotation(regex);
+    *this = toAutomat(tokens);
+}
+
+Automat::Automat(const States &state, const Sigma &sigma, const Transitions &trans)
+    : stateMachine(state), transitions(trans), alphabet(sigma) {
+    bool isValidFlag = true;
+    isValidFlag = isValidFlag & state.validStates() & sigma.validSigma() & trans.validTransitions();
+    if (!isValidFlag) {
+        std::cout << "Automaton is invalid\n";
+        this->ok = false;
+    }
 }
 
 Automat::Automat(const Automat &other) {
@@ -54,77 +99,19 @@ Automat::Automat(const Automat &other) {
     this->ok = other.ok;
 }
 
-void Automat::parseRegex(std::string &regex) {
-    for (int index = 0; regex[index]; ++index) {
-        if (index != regex.length() - 1) {
-            if (!strchr("(|.", regex[index]) && !strchr("|*.+?)", regex[index + 1])) {
-                regex.insert(regex.begin() + index + 1, '.');
-            }
-        }
+Automat &Automat::operator=(const Automat &other) {
+    if (this != &other) { // Added self-assignment protection
+        this->stateMachine = other.stateMachine;
+        this->transitions = other.transitions;
+        this->alphabet = other.alphabet;
+        this->ok = other.ok;
     }
+    return *this;
 }
 
-std::deque<std::string> Automat::postfixNotation(const std::string &expression) {
-    std::map<std::string, int> precedence;
-    precedence["+"] = precedence["*"] = precedence["?"] = 3;
-    precedence["."] = 2;
-    precedence["|"] = 1;
-    precedence["("] = -1;
+Automat::~Automat() = default;
 
-    long long number = 0;
-    std::deque<std::string> outputTokens;
-    std::deque<std::string> operatorStack;
-
-    for (int index = 0; expression[index]; ++index) {
-        if (expression[index] <= '9' && expression[index] >= '0') {
-            while (expression[index] <= '9' && expression[index] >= '0') {
-                number = number * 10 + expression[index] - '0';
-                ++index;
-            }
-            --index;
-            outputTokens.push_back(std::to_string(number));
-            number = 0;
-        } else if (expression[index] <= 'z' && expression[index] >= 'a') {
-            outputTokens.push_back(std::string(1, expression[index]));
-        } else {
-            std::string symbol;
-            symbol += expression[index];
-            if (expression[index] == '(') {
-                operatorStack.push_back(symbol);
-            } else if (expression[index] == ')') {
-                while (operatorStack.back() != "(") {
-                    outputTokens.push_back(operatorStack.back());
-                    operatorStack.pop_back();
-                }
-                operatorStack.pop_back();
-            } else {
-                while (!operatorStack.empty() && precedence[symbol] <= precedence[operatorStack.back()]) {
-                    outputTokens.push_back(operatorStack.back());
-                    operatorStack.pop_back();
-                }
-                operatorStack.push_back(symbol);
-            }
-        }
-    }
-
-    while (!operatorStack.empty()) {
-        outputTokens.push_back(operatorStack.back());
-        operatorStack.pop_back();
-    }
-    return outputTokens;
-}
-
-Automat::Automat(std::string &regex) {
-    parseRegex(regex);
-    std::deque<std::string> tokens = postfixNotation(regex);
-    *this = toAutomat(tokens);
-}
-
-bool Automat::belongsToAutomaton(const std::string &word) const {
-    char buffer[2000];
-    std::strcpy(buffer, word.c_str());
-    return acceptsWord(buffer);
-}
+// --- Static Factory Methods ---
 
 Automat Automat::toAutomat(std::deque<std::string> tokens) {
     std::deque<Automat> automatonStack;
@@ -167,35 +154,19 @@ Automat Automat::toAutomat(std::deque<std::string> tokens) {
     return automatonStack.back();
 }
 
-Automat::Automat(const Input &input) : stateMachine(input), alphabet(input) {
-    transitions = Transitions{input, stateMachine, alphabet};
-    bool isValid = true;
-    isValid = isValid & stateMachine.validStates() & alphabet.validSigma() & transitions.validTransitions();
-    if (!isValid) {
-        std::cout << "Automaton is invalid\n";
-        this->ok = false;
-    }
-}
+// --- Core API / Operations ---
 
-Automat::Automat(const States &state, const Sigma &sigma, const Transitions &trans)
-    : stateMachine(state), transitions(trans), alphabet(sigma) {
-    bool isValid = true;
-    isValid = isValid & state.validStates() & sigma.validSigma() & trans.validTransitions();
-    if (!isValid) {
-        std::cout << "Automaton is invalid\n";
-        this->ok = false;
-    }
+bool Automat::belongsToAutomaton(const std::string &word) const {
+    char buffer[2000];
+    std::strcpy(buffer, word.c_str());
+    return acceptsWord(buffer);
 }
 
 bool Automat::acceptsWord(char word[]) const {
-    bool isValid = false;
-    dfs(isValid, word, stateMachine.startNode(), 0, std::strlen(word));
-    return isValid;
+    bool isValidFlag = false;
+    dfs(isValidFlag, word, stateMachine.startNode(), 0, std::strlen(word));
+    return isValidFlag;
 }
-
-bool Automat::isValid() const { return ok; }
-bool Automat::isDFA() const { return transitions.isDFA(); }
-bool Automat::isNFA() const { return transitions.isNFA(); }
 
 void Automat::toDFA() {
     toNFA();
@@ -292,34 +263,6 @@ void Automat::toDFA() {
     transitions.modifyTransitions(componentTransitions);
 }
 
-std::ostream &operator<<(std::ostream &output, const Automat &automaton) {
-    output << "About the automaton: \n";
-    output << automaton.stateMachine << "\n" << automaton.transitions << "\n";
-    return output;
-}
-
-void Automat::returnNfa(int node, bool visited[], std::vector<TransitionNode> &aux,
-                        std::vector<TransitionNode> transitions[], bool &isFinal) {
-    visited[node] = true;
-    if (stateMachine.isFinalState(node)) {
-        isFinal = true;
-    }
-
-    for (int index = 0; index < transitions[node].size(); ++index) {
-        if (visited[transitions[node][index].node] == false) {
-            if (transitions[node][index].symbol != '$') {
-                visited[transitions[node][index].node] = true;
-                aux.push_back(transitions[node][index]);
-            } else {
-                returnNfa(transitions[node][index].node, visited, aux, transitions, isFinal);
-            }
-        } else if (transitions[node][index].symbol != '$') {
-            visited[transitions[node][index].node] = false;
-            aux.push_back(transitions[node][index]);
-        }
-    }
-}
-
 void Automat::toNFA() {
     std::vector<TransitionNode> normalizedTransitions[kNodeLimit];
     std::vector<int> finalStateList;
@@ -341,22 +284,7 @@ void Automat::toNFA() {
     stateMachine.changeFinalStates(finalStateList);
 }
 
-void Automat::increaseN(int count) {
-    transitions.increaseN(count);
-    stateMachine.increaseN(count);
-}
-
-std::vector<TransitionNode> *Automat::getTransitions() {
-    return transitions.getTransitions();
-}
-
-std::vector<int> Automat::initialStates() {
-    return stateMachine.initialStates();
-}
-
-std::vector<int> Automat::finalStates() {
-    return stateMachine.finalStates();
-}
+// --- Regex Builder Operations ---
 
 void Automat::concatenate(Automat &other) {
     other.increaseN(stateMachine.size());
@@ -373,12 +301,12 @@ void Automat::alternate(Automat &other) {
     transitions.addTransitions({1}, {stateMachine.initialStates()[0], other.initialStates()[0]});
     stateMachine.changeInitialState(1);
 
-    std::vector<int> states = stateMachine.finalStates();
+    std::vector<int> statesList = stateMachine.finalStates();
     std::vector<int> otherStates = other.finalStates();
     for (int otherState : otherStates) {
-        states.push_back(otherState);
+        statesList.push_back(otherState);
     }
-    stateMachine.changeFinalStates(states);
+    stateMachine.changeFinalStates(statesList);
     stateMachine.updateNodeCount(other.states().size() - stateMachine.size());
 }
 
@@ -400,10 +328,103 @@ void Automat::plus() {
 void Automat::optional() {
     increaseN(1);
     transitions.addTransitions({1}, stateMachine.initialStates());
-    std::vector<int> states = stateMachine.finalStates();
-    states.push_back(1);
-    stateMachine.changeFinalStates(states);
+    std::vector<int> statesList = stateMachine.finalStates();
+    statesList.push_back(1);
+    stateMachine.changeFinalStates(statesList);
     stateMachine.changeInitialState(1);
 }
 
-Automat::~Automat() = default;
+// --- Getters / State Queries ---
+
+bool Automat::isValid() const { return ok; }
+bool Automat::isDFA() const { return transitions.isDFA(); }
+bool Automat::isNFA() const { return transitions.isNFA(); }
+
+std::vector<TransitionNode> *Automat::getTransitions() {
+    return transitions.getTransitions();
+}
+
+std::vector<int> Automat::initialStates() const {
+    return stateMachine.initialStates();
+}
+
+std::vector<int> Automat::finalStates() const {
+    return stateMachine.finalStates();
+}
+
+// --- Modifiers ---
+
+void Automat::increaseN(int count) {
+    transitions.increaseN(count);
+    stateMachine.increaseN(count);
+}
+
+// --- Static Helper Methods ---
+
+void Automat::parseRegex(std::string &regex) {
+    for (int index = 0; regex[index]; ++index) {
+        if (index != regex.length() - 1) {
+            if (!strchr("(|.", regex[index]) && !strchr("|*.+?)", regex[index + 1])) {
+                regex.insert(regex.begin() + index + 1, '.');
+            }
+        }
+    }
+}
+
+std::deque<std::string> Automat::postfixNotation(const std::string &expression) {
+    std::map<std::string, int> precedence;
+    precedence["+"] = precedence["*"] = precedence["?"] = 3;
+    precedence["."] = 2;
+    precedence["|"] = 1;
+    precedence["("] = -1;
+
+    long long number = 0;
+    std::deque<std::string> outputTokens;
+    std::deque<std::string> operatorStack;
+
+    for (int index = 0; expression[index]; ++index) {
+        if (expression[index] <= '9' && expression[index] >= '0') {
+            while (expression[index] <= '9' && expression[index] >= '0') {
+                number = number * 10 + expression[index] - '0';
+                ++index;
+            }
+            --index;
+            outputTokens.push_back(std::to_string(number));
+            number = 0;
+        } else if (expression[index] <= 'z' && expression[index] >= 'a') {
+            outputTokens.push_back(std::string(1, expression[index]));
+        } else {
+            std::string symbol;
+            symbol += expression[index];
+            if (expression[index] == '(') {
+                operatorStack.push_back(symbol);
+            } else if (expression[index] == ')') {
+                while (operatorStack.back() != "(") {
+                    outputTokens.push_back(operatorStack.back());
+                    operatorStack.pop_back();
+                }
+                operatorStack.pop_back();
+            } else {
+                while (!operatorStack.empty() && precedence[symbol] <= precedence[operatorStack.back()]) {
+                    outputTokens.push_back(operatorStack.back());
+                    operatorStack.pop_back();
+                }
+                operatorStack.push_back(symbol);
+            }
+        }
+    }
+
+    while (!operatorStack.empty()) {
+        outputTokens.push_back(operatorStack.back());
+        operatorStack.pop_back();
+    }
+    return outputTokens;
+}
+
+// --- Operator Overloads ---
+
+std::ostream &operator<<(std::ostream &output, const Automat &automaton) {
+    output << "About the automaton: \n";
+    output << automaton.stateMachine << "\n" << automaton.transitions << "\n";
+    return output;
+}

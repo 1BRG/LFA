@@ -5,33 +5,13 @@
 #include "../include/Transitions.h"
 
 #include <cstring>
+#include <iostream>
 
-Transitions &Transitions::operator=(const Transitions &other) {
-    this->ok = other.ok;
-    this->dfa = other.dfa;
-    this->count = other.count;
-    for (int index = 0; index < kNodeLimit; ++index) {
-        this->transitions[index] = other.transitions[index];
-        this->transitionMap[index] = other.transitionMap[index];
-        this->word[index] = other.word[index];
-    }
-    return *this;
-}
+// --- Constructors, Destructor, and Assignment ---
 
 Transitions::Transitions(char value) {
     transitions[1].push_back({2, value});
     transitionMap[1][value].insert(2);
-}
-
-Transitions::Transitions(const Transitions &other) {
-    this->ok = other.ok;
-    this->dfa = other.dfa;
-    this->count = other.count;
-    for (int index = 0; index < kNodeLimit; ++index) {
-        this->transitions[index] = other.transitions[index];
-        this->transitionMap[index] = other.transitionMap[index];
-        this->word[index] = other.word[index];
-    }
 }
 
 Transitions::Transitions(const std::vector<TransitionNode> transitions[kNodeLimit]) {
@@ -91,20 +71,45 @@ Transitions::Transitions(const Input &input, const States &state, const Sigma &s
     }
 }
 
-void Transitions::getTransition(std::map<char, std::set<int>> transitionMap[kNodeLimit]) const {
-    for (int index = 0; index < 255; ++index) {
-        if (!this->transitionMap[index].empty()) {
-            transitionMap[index] = this->transitionMap[index];
-        }
+Transitions::Transitions(const Transitions &other) {
+    this->ok = other.ok;
+    this->dfa = other.dfa;
+    this->count = other.count;
+    for (int index = 0; index < kNodeLimit; ++index) {
+        this->transitions[index] = other.transitions[index];
+        this->transitionMap[index] = other.transitionMap[index];
+        this->word[index] = other.word[index];
     }
 }
+
+Transitions &Transitions::operator=(const Transitions &other) {
+    if (this != &other) {
+        this->ok = other.ok;
+        this->dfa = other.dfa;
+        this->count = other.count;
+        for (int index = 0; index < kNodeLimit; ++index) {
+            this->transitions[index] = other.transitions[index];
+            this->transitionMap[index] = other.transitionMap[index];
+            this->word[index] = other.word[index];
+        }
+    }
+    return *this;
+}
+
+Transitions::~Transitions() = default;
+
+// --- Core API / Getters ---
 
 bool Transitions::validTransitions() const {
     return ok;
 }
 
-char Transitions::character(int state, int index) const {
-    return transitions[state][index].symbol;
+bool Transitions::isDFA() const {
+    return dfa;
+}
+
+bool Transitions::isNFA() const {
+    return !dfa;
 }
 
 int Transitions::size(int state) const {
@@ -115,13 +120,62 @@ int Transitions::node(int state, int index) const {
     return transitions[state][index].node;
 }
 
-bool Transitions::isDFA() const {
-    return dfa;
+char Transitions::character(int state, int index) const {
+    return transitions[state][index].symbol;
 }
 
-bool Transitions::isNFA() const {
-    return !dfa;
+void Transitions::getTransition(std::map<char, std::set<int>> transitionMap[kNodeLimit]) const {
+    for (int index = 0; index < 255; ++index) {
+        if (!this->transitionMap[index].empty()) {
+            transitionMap[index] = this->transitionMap[index];
+        }
+    }
 }
+
+std::vector<TransitionNode> *Transitions::getTransitions() {
+    return transitions;
+}
+
+// --- Modifiers ---
+
+void Transitions::modifyTransitions(std::vector<TransitionNode> transitions[kNodeLimit]) {
+    for (int index = 0; index < kNodeLimit; ++index) {
+        this->transitions[index] = transitions[index];
+    }
+    dfa = true;
+}
+
+void Transitions::increaseN(int count) {
+    for (int index = kNodeLimit - 1; index >= 0; --index) {
+        if (!transitions[index].empty()) {
+            for (auto transition : transitions[index]) {
+                transitions[index + count].push_back({transition.node + count, transition.symbol});
+            }
+            transitions[index].clear();
+        }
+    }
+}
+
+void Transitions::addTransitions(const std::vector<int> &states, const std::vector<int>& targets) {
+    for (auto node : states) {
+        for (auto destination : targets) {
+            this->transitions[node].push_back({destination, '$'});
+        }
+    }
+}
+
+void Transitions::addTransitions(std::vector<TransitionNode> transitions[kNodeLimit]) {
+    for (int index = 0; index < kNodeLimit; ++index) {
+        if (!transitions[index].empty()) {
+            if (!this->transitions[index].empty()) {
+                std::cout << "invalid transition update\n";
+            }
+            this->transitions[index] = transitions[index];
+        }
+    }
+}
+
+// --- Operator Overloads ---
 
 std::ostream &operator<<(std::ostream &output, const Transitions &transition) {
     output << "About transitions:\n";
@@ -154,46 +208,3 @@ std::ostream &operator<<(std::ostream &output, const Transitions &transition) {
     }
     return output;
 }
-
-void Transitions::modifyTransitions(std::vector<TransitionNode> transitions[kNodeLimit]) {
-    for (int index = 0; index < kNodeLimit; ++index) {
-        this->transitions[index] = transitions[index];
-    }
-    dfa = true;
-}
-
-void Transitions::increaseN(int count) {
-    for (int index = kNodeLimit - 1; index >= 0; --index) {
-        if (!transitions[index].empty()) {
-            for (auto transition : transitions[index]) {
-                transitions[index + count].push_back({transition.node + count, transition.symbol});
-            }
-            transitions[index].clear();
-        }
-    }
-}
-
-void Transitions::addTransitions(const std::vector<int> &states, const std::vector<int>& targets) {
-    for (auto node : states) {
-        for (auto destination : targets) {
-            this->transitions[node].push_back({destination, '$'});
-        }
-    }
-}
-
-void Transitions::addTransitions(std::vector<TransitionNode> transitions[kNodeLimit]) {
-    for (int index = 0; index < kNodeLimit; ++index) {
-        if (!transitions[index].empty()) {
-            if (!this->transitions[index].empty()) {
-                std::cout << "invalid transition update";
-            }
-            this->transitions[index] = transitions[index];
-        }
-    }
-}
-
-std::vector<TransitionNode> *Transitions::getTransitions() {
-    return transitions;
-}
-
-Transitions::~Transitions() = default;

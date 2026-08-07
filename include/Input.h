@@ -10,23 +10,28 @@
 #include <string>
 
 class Input {
+private:
     static const int kLineCount = 2000;
     static const int kLineLength = 50;
-    std::string lines[kLineCount];
-public:
-    Input() = default;
 
+    std::string lines[kLineCount];
+
+public:
+    // --- Constructors, Destructor, and Assignment ---
+    Input() = default;
     explicit Input(const std::string &filename);
+    Input(const Input &other);
+    Input &operator=(const Input &other);
+    ~Input();
+
+    // --- Core API / Getters ---
     int findState() const;
     int findTrans() const;
     int findSigma() const;
     void matrix(std::string copy[]) const;
+
+    // --- Operator Overloads ---
     friend std::ostream &operator<<(std::ostream &output, const Input &input);
-    Input &operator=(const Input &other);
-    Input(const Input &other);
-    ~Input();
 };
-
-
 
 #endif //INPUT_H

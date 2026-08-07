@@ -6,31 +6,12 @@
 
 #include <cstring>
 
-States &States::operator=(const States &other) {
-    for (int index = 0; index < kNodeLimit; ++index) {
-        this->final[index] = other.final[index];
-    }
-    this->start = other.start;
-    this->ok = other.ok;
-    this->stateMap = other.stateMap;
-    this->nodeCount = other.nodeCount;
-    return *this;
-}
+// --- Constructors, Destructor, and Assignment ---
 
 States::States(char value) : nodeCount(2), start(1) {
     final[2] = true;
     stateMap[std::to_string(1)] = 1;
     stateMap[std::to_string(2)] = 2;
-}
-
-States::States(const States &other) {
-    for (int index = 0; index < kNodeLimit; ++index) {
-        this->final[index] = other.final[index];
-    }
-    this->start = other.start;
-    this->ok = other.ok;
-    this->stateMap = other.stateMap;
-    this->nodeCount = other.nodeCount;
 }
 
 States::States(int initialState, bool initialFinalStates[]) {
@@ -97,8 +78,40 @@ States::States(const Input &input) {
     }
 }
 
+States::States(const States &other) {
+    for (int index = 0; index < kNodeLimit; ++index) {
+        this->final[index] = other.final[index];
+    }
+    this->start = other.start;
+    this->ok = other.ok;
+    this->stateMap = other.stateMap;
+    this->nodeCount = other.nodeCount;
+}
+
+States &States::operator=(const States &other) {
+    if (this != &other) { // Added self-assignment protection
+        for (int index = 0; index < kNodeLimit; ++index) {
+            this->final[index] = other.final[index];
+        }
+        this->start = other.start;
+        this->ok = other.ok;
+        this->stateMap = other.stateMap;
+        this->nodeCount = other.nodeCount;
+    }
+    return *this;
+}
+
+States::~States() = default;
+
+// --- Core API / Getters ---
+
 bool States::validStates() const {
     return ok;
+}
+
+int States::size() {
+    updateNodeCount(0);
+    return nodeCount;
 }
 
 int States::translate(const std::string &node) const {
@@ -109,13 +122,64 @@ int States::translate(const std::string &node) const {
     return -1;
 }
 
+int States::startNode() const {
+    return this->start;
+}
+
 bool States::isFinalState(int state) const {
     return final[state];
 }
 
-int States::startNode() const {
-    return this->start;
+std::vector<int> States::initialStates() const {
+    std::vector<int> states;
+    states.push_back(start);
+    return states;
 }
+
+std::vector<int> States::finalStates() const {
+    std::vector<int> states;
+    for (int index = 0; index < kNodeLimit; ++index) {
+        if (final[index]) {
+            states.push_back(index);
+        }
+    }
+    return states;
+}
+
+// --- Modifiers ---
+
+void States::changeInitialState(int state) {
+    start = state;
+}
+
+void States::changeFinalStates(const std::vector<int> &states) {
+    for (bool & index : final) {
+        index = false;
+    }
+    for (auto node : states) {
+        final[node] = true;
+    }
+}
+
+void States::updateNodeCount(int count) {
+    if (nodeCount == 0) {
+        nodeCount = stateMap.size();
+    }
+    nodeCount += count;
+}
+
+void States::increaseN(int count) {
+    for (int index = kNodeLimit - 1; index >= 0; --index) {
+        if (final[index]) {
+            final[index + count] = true;
+        }
+        final[index] = false;
+    }
+    start += count;
+    updateNodeCount(count);
+}
+
+// --- Operator Overloads ---
 
 std::ostream &operator<<(std::ostream &output, const States &state) {
     output << "About states:\n";
@@ -140,57 +204,3 @@ std::ostream &operator<<(std::ostream &output, const States &state) {
     output << "\n";
     return output;
 }
-
-void States::updateNodeCount(int count) {
-    if (nodeCount == 0) {
-        nodeCount = stateMap.size();
-    }
-    nodeCount += count;
-}
-
-void States::changeInitialState(int state) {
-    start = state;
-}
-
-int States::size() {
-    updateNodeCount(0);
-    return nodeCount;
-}
-
-void States::increaseN(int count) {
-    for (int index = kNodeLimit - 1; index >= 0; --index) {
-        if (final[index]) {
-            final[index + count] = true;
-        }
-        final[index] = false;
-    }
-    start += count;
-    updateNodeCount(count);
-}
-
-std::vector<int> States::initialStates() const {
-    std::vector<int> states;
-    states.push_back(start);
-    return states;
-}
-
-void States::changeFinalStates(const std::vector<int> &states) {
-    for (bool & index : final) {
-        index = false;
-    }
-    for (auto node : states) {
-        final[node] = true;
-    }
-}
-
-std::vector<int> States::finalStates() const {
-    std::vector<int> states;
-    for (int index = 0; index < kNodeLimit; ++index) {
-        if (final[index]) {
-            states.push_back(index);
-        }
-    }
-    return states;
-}
-
-States::~States() = default;
