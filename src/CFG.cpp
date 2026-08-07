@@ -5,55 +5,67 @@
 #include "../include/CFG.h"
 
 #include <algorithm>
-#include <fstream>
 #include <cstring>
-#include <exception>
+#include <fstream>
 #include <iostream>
 
 CFG::CFG(std::string &filename) {
     std::ifstream file(filename.c_str());
     char line[205];
+
     while (file.getline(line, sizeof(line))) {
-        if (strcmp(line, "") == 0)
+        if (strcmp(line, "") == 0) {
             continue;
-        char *p = strtok(line, " ,->|");
-        char symbol = *p;
-        if (!start)
+        }
+
+        char *token = strtok(line, " ,->|");
+        char symbol = *token;
+
+        if (!start) {
             start = symbol;
+        }
+
         nonTerminals.insert(symbol);
-        p = strtok(NULL, " ,->|");
-        while (p) {
+        token = strtok(nullptr, " ,->|");
+
+        while (token) {
             char production[205];
-            strcpy(production, p);
-            std::vector<char> values;
-            for (int i = 0; production[i]; i++) {
-                if (terminal(production[i]))
-                    terminals.insert(production[i]);
-                else nonTerminals.insert(production[i]);
-                values.push_back(production[i]);
+            strcpy(production, token);
+            std::vector<char> productionSymbols;
+
+            for (int index = 0; production[index]; ++index) {
+                if (terminal(production[index])) {
+                    terminals.insert(production[index]);
+                } else {
+                    nonTerminals.insert(production[index]);
+                }
+                productionSymbols.push_back(production[index]);
             }
-            prod[symbol].push_back(values);
-            p = strtok(NULL, " ,->|");
+
+            productions[symbol].push_back(productionSymbols);
+            token = strtok(nullptr, " ,->|");
         }
     }
-    for (std::set<char>::iterator it = nonTerminals.begin(); it != nonTerminals.end(); ++it) {
-        if (prod.find(*it) == prod.end()) {
+
+    for (char nonTerminal : nonTerminals) {
+        if (productions.find(nonTerminal) == productions.end()) {
             throw std::runtime_error("Non-terminal without productions");
         }
     }
-    for (auto it = prod.begin(); it != prod.end(); ++it) {
+
+    for (auto & production : productions) {
         int count = 0;
-        for (int index = 1; index < prod[it->first].size(); ++index) {
+        for (int index = 1; index < productions[production.first].size(); ++index) {
             bool isTerminalOnly = true;
-            for (int position = 0; position < prod[it->first][index].size(); ++position) {
-                if (!terminal(prod[it->first][index][position])) {
+            for (char position : productions[production.first][index]) {
+                if (!terminal(position)) {
                     isTerminalOnly = false;
                     break;
                 }
             }
             if (isTerminalOnly) {
-                std::swap(prod[it->first][count], prod[it->first][index]);
-                count++;
+                std::swap(productions[production.first][count], productions[production.first][index]);
+                ++count;
             }
         }
     }
@@ -62,8 +74,9 @@ CFG::CFG(std::string &filename) {
 int CFG::numberOfNonTerminals(const std::string &current) {
     int count = 0;
     for (char symbol : current) {
-        if (!terminal(symbol))
-            count++;
+        if (!terminal(symbol)) {
+            ++count;
+        }
     }
     return count;
 }
@@ -74,41 +87,57 @@ bool CFG::terminal(char symbol) {
 
 int CFG::numberOfTerminals(const std::string &current) {
     int count = 0;
-    for (int i = 0; current[i]; i++) {
-        if (terminal(current[i]))
-            count++;
+    for (int index = 0; current[index]; ++index) {
+        if (terminal(current[index])) {
+            ++count;
+        }
     }
     return count;
 }
 
-void CFG::dfsGenerate(int maxLen, int maxCount, int &count, std::vector<std::string> &result, std::string current) {
+void CFG::generateFromCurrent(int maxLen, int maxCount, int &count,
+                              std::vector<std::string> &result,
+                              const std::string &current) {
     bool isTerminalOnly = true;
     if (current.size() / 2 > maxLen) {
         return;
     }
-    temp[current] = true;
-    for (int i = 0; current[i]; i++) {
-        if (!terminal(current[i])) {
+
+    visitedStates[current] = true;
+
+    for (int index = 0; current[index]; ++index) {
+        if (!terminal(current[index])) {
             isTerminalOnly = false;
-            char nonTerminal = current[i];
-            std::string prefix = current.substr(0, i), suffix = current.substr(i + 1);
-            for (auto production : prod[nonTerminal]) {
+            char nonTerminal = current[index];
+            std::string prefix = current.substr(0, index);
+            std::string suffix = current.substr(index + 1);
+
+            for (const auto& production : productions[nonTerminal]) {
                 std::string next = prefix;
-                for (auto symbol : production)
-                    if (symbol != '$')
+                for (auto symbol : production) {
+                    if (symbol != '$') {
                         next += symbol;
+                    }
+                }
                 next += suffix;
-                dfsGenerate(maxLen, maxCount, count, result, next);
-                if (count == maxCount)
+
+                generateFromCurrent(maxLen, maxCount, count, result, next);
+                if (count == maxCount) {
                     break;
+                }
             }
-            if (count == maxCount)
+
+            if (count == maxCount) {
                 break;
+            }
         }
     }
+
     if (isTerminalOnly && count < maxCount) {
-        if (current.length() <= maxLen)
-            result.push_back(current), count++;
+        if (current.length() <= maxLen) {
+            result.push_back(current);
+            ++count;
+        }
     }
 }
 
@@ -117,104 +146,132 @@ std::vector<std::string> CFG::generate(int maxLen, int maxCount) {
     int total = 0;
     std::string current;
     current += start;
-    dfsGenerate(maxLen, maxCount, total, result, current);
-    temp.clear();
+
+    generateFromCurrent(maxLen, maxCount, total, result, current);
+    visitedStates.clear();
     return result;
 }
 
 bool CFG::potential(const std::string &input, const std::string &target) {
     std::string pattern;
-    for (auto symbol : input)
-        if (terminal(symbol))
+    for (auto symbol : input) {
+        if (terminal(symbol)) {
             pattern += symbol;
-        else pattern += '*';
-    int n = target.size(), m = pattern.size();
-    int i = 0, j = 0;
-    int last = -1, match = 0;
+        } else {
+            pattern += '*';
+        }
+    }
 
-    while (i < n) {
-        if (j < m && (pattern[j] == target[i])) {
-            i++;
-            j++;
-        }
-        else if (j < m && pattern[j] == '*') {
-            last = j;
-            match = i;
-            j++;
-        }
-        else if (last != -1) {
-            j = last + 1;
-            match++;
-            i = match;
-        }
-        else {
+    const int targetLength = target.size();
+    const int patternLength = pattern.size();
+    int index = 0;
+    int patternIndex = 0;
+    int lastMatch = -1;
+    int matchPosition = 0;
+
+    while (index < targetLength) {
+        if (patternIndex < patternLength && pattern[patternIndex] == target[index]) {
+            ++index;
+            ++patternIndex;
+        } else if (patternIndex < patternLength && pattern[patternIndex] == '*') {
+            lastMatch = patternIndex;
+            matchPosition = index;
+            ++patternIndex;
+        } else if (lastMatch != -1) {
+            patternIndex = lastMatch + 1;
+            ++matchPosition;
+            index = matchPosition;
+        } else {
             return false;
         }
     }
-    while (j < m && pattern[j] == '*') {
-        j++;
+
+    while (patternIndex < patternLength && pattern[patternIndex] == '*') {
+        ++patternIndex;
     }
-    return j == m;
+    return patternIndex == patternLength;
 }
 
 std::ofstream output("output.txt");
 
-void CFG::dfsDerivation(const std::string &target, std::vector<std::string> &result, std::string &current, bool &isFound) {
+void CFG::deriveFromCurrent(const std::string &target,
+                            std::vector<std::string> &result,
+                            const std::string &current,
+                            bool &isFound) {
     bool isTerminalOnly = true;
-    if (temp.find(current) != temp.end())
-        return;
-    temp[current] = true;
-    output << current << "\n";
-    if (numberOfTerminals(current) > target.length() || numberOfNonTerminals(current) > target.length()) {
+    if (visitedStates.find(current) != visitedStates.end()) {
         return;
     }
-    for (int i = 0; current[i]; i++) {
-        if (!terminal(current[i])) {
+
+    visitedStates[current] = true;
+    output << current << "\n";
+
+    if (numberOfTerminals(current) > target.length() ||
+        numberOfNonTerminals(current) > target.length()) {
+        return;
+    }
+
+    for (int index = 0; current[index]; ++index) {
+        if (!terminal(current[index])) {
             isTerminalOnly = false;
-            char nonTerminal = current[i];
-            std::string prefix = current.substr(0, i), suffix = current.substr(i + 1);
-            for (auto production : prod[nonTerminal]) {
+            char nonTerminal = current[index];
+            std::string prefix = current.substr(0, index);
+            std::string suffix = current.substr(index + 1);
+
+            for (const auto& production : productions[nonTerminal]) {
                 std::string next = prefix;
-                for (auto symbol : production)
-                    if (symbol != '$')
+                for (auto symbol : production) {
+                    if (symbol != '$') {
                         next += symbol;
+                    }
+                }
                 next += suffix;
+
                 result.push_back(next);
-                if (potential(next, target))
-                    dfsDerivation(target, result, next, isFound);
-                if (isFound)
+                if (potential(next, target)) {
+                    deriveFromCurrent(target, result, next, isFound);
+                }
+                if (isFound) {
                     break;
+                }
                 result.pop_back();
             }
-            if (isFound)
+
+            if (isFound) {
                 break;
+            }
         }
     }
+
     if (isTerminalOnly && current == target) {
         isFound = true;
     }
 }
 
-std::vector<std::string> CFG::derivation(std::string target) {
+std::vector<std::string> CFG::derivation(const std::string& target) {
     std::vector<std::string> result;
     bool isFound = false;
     std::string current;
     current += start;
+
     result.push_back(current);
-    dfsDerivation(target, result, current, isFound);
-    temp.clear();
-    if (!isFound)
+    deriveFromCurrent(target, result, current, isFound);
+    visitedStates.clear();
+
+    if (!isFound) {
         return {"Empty"};
+    }
     return result;
 }
 
-bool CFG::recognize(std::string &target) {
+bool CFG::recognize(const std::string &target) {
     std::vector<std::string> result;
     bool isFound = false;
     std::string current;
     current += start;
-    dfsDerivation(target, result, current, isFound);
-    temp.clear();
+
+    deriveFromCurrent(target, result, current, isFound);
+    visitedStates.clear();
     return isFound;
 }
 

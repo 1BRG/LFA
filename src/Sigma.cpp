@@ -5,15 +5,17 @@
 #include "../include/Sigma.h"
 
 Sigma &Sigma::operator=(const Sigma &other) {
-    for (int i = 0; i < 257; i++)
-        this->alphabet[i] = other.alphabet[i];
+    for (int index = 0; index < 257; ++index) {
+        this->alphabet[index] = other.alphabet[index];
+    }
     this->ok = other.ok;
     return *this;
 }
 
 Sigma::Sigma(const Sigma &other) {
-    for (int i = 0; i < 257; i++)
-        this->alphabet[i] = other.alphabet[i];
+    for (int index = 0; index < 257; ++index) {
+        this->alphabet[index] = other.alphabet[index];
+    }
     this->ok = other.ok;
 }
 
@@ -26,18 +28,22 @@ bool Sigma::validSigma() const {
 }
 
 Sigma::Sigma(const Input &input) {
-    for (int i = 0; i < 257; i++)
-        alphabet[i] = 0;
-    string matrix[n];
-    char symbol;
+    for (bool & index : alphabet) {
+        index = false;
+    }
+
+    std::string matrix[kNodeLimit];
     input.matrix(matrix);
-    for (int i = input.findSigma() + 1; true; i++) {
-        if (matrix[i] == "End")
+
+    for (int index = input.findSigma() + 1; true; ++index) {
+        if (matrix[index] == "End") {
             break;
-        if (matrix[i][0] == '#')
+        }
+        if (matrix[index][0] == '#') {
             continue;
-        symbol = matrix[i][0];
-        alphabet[int(symbol)] = 1;
+        }
+        char symbol = matrix[index][0];
+        alphabet[int(symbol)] = true;
     }
 }
 
@@ -45,14 +51,15 @@ bool Sigma::belongsToAlphabet(char ch) const {
     return alphabet[int(ch)];
 }
 
-ostream &operator<<(ostream &os, const Sigma &a) {
-    os << "Alphabet: ";
-    for (int i = 0; i < 255; i++)
-        if (a.alphabet[i])
-            os << char(i) << " ";
-    os << "\n";
-    return os;
+std::ostream &operator<<(std::ostream &output, const Sigma &sigma) {
+    output << "Alphabet: ";
+    for (int index = 0; index < 255; ++index) {
+        if (sigma.alphabet[index]) {
+            output << static_cast<char>(index) << " ";
+        }
+    }
+    output << "\n";
+    return output;
 }
 
-Sigma::~Sigma() {
-}
+Sigma::~Sigma() = default;

@@ -5,27 +5,25 @@
 #ifndef INPUT_H
 #define INPUT_H
 
-using namespace std;
+#include <fstream>
+#include <ostream>
 #include <string>
 
-#include <fstream>
-
-class Input
-{
-    static const int n = 2000, m = 50;
-    string lines[n];
-    ///bool ok = true;
+class Input {
+    static const int kLineCount = 2000;
+    static const int kLineLength = 50;
+    std::string lines[kLineCount];
 public:
     Input() = default;
 
-    explicit Input(const string &filename);
+    explicit Input(const std::string &filename);
     int findState() const;
     int findTrans() const;
     int findSigma() const;
-    void matrix(string copy[]) const;
-    friend ostream& operator<<(ostream& os, const Input& a);
-    Input& operator=(const Input& other);
-    Input(const Input& other);
+    void matrix(std::string copy[]) const;
+    friend std::ostream &operator<<(std::ostream &output, const Input &input);
+    Input &operator=(const Input &other);
+    Input(const Input &other);
     ~Input();
 };
 

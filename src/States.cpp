@@ -4,83 +4,109 @@
 
 #include "../include/States.h"
 
+#include <cstring>
+
 States &States::operator=(const States &other) {
-    for (int i = 0; i < n; i++)
-        this->final[i] = other.final[i];
+    for (int index = 0; index < kNodeLimit; ++index) {
+        this->final[index] = other.final[index];
+    }
     this->start = other.start;
     this->ok = other.ok;
-    this->q = other.q;
+    this->stateMap = other.stateMap;
     this->nodeCount = other.nodeCount;
     return *this;
 }
 
-States::States(char value): nodeCount(2), start(1) {
+States::States(char value) : nodeCount(2), start(1) {
     final[2] = true;
-    q[to_string(1)] = 1;
-    q[to_string(2)] = 2;
+    stateMap[std::to_string(1)] = 1;
+    stateMap[std::to_string(2)] = 2;
 }
 
 States::States(const States &other) {
-    for (int i = 0; i < n; i++)
-        this->final[i] = other.final[i];
+    for (int index = 0; index < kNodeLimit; ++index) {
+        this->final[index] = other.final[index];
+    }
     this->start = other.start;
     this->ok = other.ok;
-    this->q = other.q;
+    this->stateMap = other.stateMap;
     this->nodeCount = other.nodeCount;
 }
 
-States::States(int start, bool final1[]) {
-    this->start = start;
-    memcpy(this->final, final1, sizeof(final));
-    for (int i = 0; i < n; i++)
-        q[to_string(i)] = i;
+States::States(int initialState, bool initialFinalStates[]) {
+    this->start = initialState;
+    std::memcpy(this->final, initialFinalStates, sizeof(final));
+    for (int index = 0; index < kNodeLimit; ++index) {
+        stateMap[std::to_string(index)] = index;
+    }
 }
 
 States::States(const Input &input) {
-    for (int i = 0; i < n; i++)
-        final[i] = false;
-    string matrix[n];
+    for (bool & index : final) {
+        index = false;
+    }
+
+    std::string matrix[kNodeLimit];
     input.matrix(matrix);
-    char stateLine[m];
-    int count = 0;
+    int stateId = 0;
     bool hasStartState = false;
-    for (int i = input.findState() + 1; true; i++) {
-        if (matrix[i] == "End")
+
+    for (int index = input.findState() + 1; true; ++index) {
+        char stateLine[kStateNameLength];
+        if (matrix[index] == "End") {
             break;
-        if (matrix[i][0] == '#')
+        }
+        if (matrix[index][0] == '#') {
             continue;
-        strcpy(stateLine, matrix[i].c_str());
-        char *p = strtok(stateLine, ", ");
-        int node;
+        }
+
+        std::strcpy(stateLine, matrix[index].c_str());
+        char *token = std::strtok(stateLine, ", ");
+        int currentNode = 0;
         int stateIndex = 0;
-        while (p) {
-            char word[m];
-            strcpy(word, p);
+
+        while (token) {
+            char word[kStateNameLength];
+            std::strcpy(word, token);
+
             if (word[0] == 'S' && stateIndex != 0) {
-                if (start != 0)
+                if (start != 0) {
                     ok = false;
-                else start = node, hasStartState = true;
-            } else if (word[0] == 'F' && stateIndex != 0)
-                final[node] = true;
-            else
-                node = q[word] != 0 ? q[word] : ++count, q[word] = count;
-            stateIndex += 1;
-            p = strtok(NULL, ", ");
+                } else {
+                    start = currentNode;
+                    hasStartState = true;
+                }
+            } else if (word[0] == 'F' && stateIndex != 0) {
+                final[currentNode] = true;
+            } else {
+                if (stateMap[word] != 0) {
+                    currentNode = stateMap[word];
+                } else {
+                    currentNode = ++stateId;
+                    stateMap[word] = currentNode;
+                }
+            }
+
+            ++stateIndex;
+            token = std::strtok(nullptr, ", ");
         }
     }
-    if (!hasStartState)
+
+    if (!hasStartState) {
         ok = false;
+    }
 }
 
 bool States::validStates() const {
     return ok;
 }
 
-int States::translate(const string &node) const {
-    map<string, int>::const_iterator it = q.find(node);
-    if (it != q.end())
+int States::translate(const std::string &node) const {
+    auto it = stateMap.find(node);
+    if (it != stateMap.end()) {
         return it->second;
-    else return -1;
+    }
+    return -1;
 }
 
 bool States::isFinalState(int state) const {
@@ -91,27 +117,34 @@ int States::startNode() const {
     return this->start;
 }
 
-ostream &operator<<(ostream &os, const States &a) {
-    os << "About states:\n";
-    if (a.ok == false || (a.start == 0)) {
-        os << "States invalid\n";
-        return os;
+std::ostream &operator<<(std::ostream &output, const States &state) {
+    output << "About states:\n";
+    if (state.ok == false || state.start == 0) {
+        output << "States invalid\n";
+        return output;
     }
-    os << "Start node: " << a.start << "\n";
-    os << "Final nodes: ";
+
+    output << "Start node: " << state.start << "\n";
+    output << "Final nodes: ";
     int count = 0;
-    for (int i = 0; i < States::n; i++)
-        if (a.final[i])
-            os << i << " ", count += 1;
-    if (!count)
-        os << "The automaton has no final states";
-    os << "\n";
-    return os;
+    for (int index = 0; index < States::kNodeLimit; ++index) {
+        if (state.final[index]) {
+            output << index << " ";
+            ++count;
+        }
+    }
+
+    if (!count) {
+        output << "The automaton has no final states";
+    }
+    output << "\n";
+    return output;
 }
 
 void States::updateNodeCount(int count) {
-    if (nodeCount == 0)
-        nodeCount = q.size();
+    if (nodeCount == 0) {
+        nodeCount = stateMap.size();
+    }
     nodeCount += count;
 }
 
@@ -125,35 +158,39 @@ int States::size() {
 }
 
 void States::increaseN(int count) {
-    for (int i = this->n; i >= 0; i--) {
-        if (final[i])
-            final[i + count] = 1;
-        final[i] = 0;
+    for (int index = kNodeLimit - 1; index >= 0; --index) {
+        if (final[index]) {
+            final[index + count] = true;
+        }
+        final[index] = false;
     }
     start += count;
     updateNodeCount(count);
 }
 
-vector<int> States::initialStates() {
-    vector<int> states;
+std::vector<int> States::initialStates() const {
+    std::vector<int> states;
     states.push_back(start);
     return states;
 }
 
-void States::changeFinalStates(const vector<int> &states) {
-    for (int i = 0; i < n; i++)
-        final[i] = 0;
-    for (auto node: states)
-        final[node] = 1;
+void States::changeFinalStates(const std::vector<int> &states) {
+    for (bool & index : final) {
+        index = false;
+    }
+    for (auto node : states) {
+        final[node] = true;
+    }
 }
 
-vector<int> States::finalStates() {
-    vector<int> states;
-    for (int i = 0; i < n; i++)
-        if (final[i])
-            states.push_back(i);
+std::vector<int> States::finalStates() const {
+    std::vector<int> states;
+    for (int index = 0; index < kNodeLimit; ++index) {
+        if (final[index]) {
+            states.push_back(index);
+        }
+    }
     return states;
 }
 
-States::~States() {
-}
+States::~States() = default;

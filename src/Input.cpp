@@ -4,58 +4,68 @@
 
 #include "../include/Input.h"
 
-Input::Input(const string &filename) {
-    ifstream inputFile(filename);
-    int index = 0;
-    string line;
-    while (getline(inputFile, line)) {
-        if (index >= n)
+Input::Input(const std::string &filename) {
+    std::ifstream inputFile(filename);
+    int currentIndex = 0;
+    std::string line;
+
+    while (std::getline(inputFile, line)) {
+        if (currentIndex >= kLineCount) {
             break;
-        lines[index++] = line;
+        }
+        lines[currentIndex++] = line;
     }
 }
 
 int Input::findState() const {
-    for (int i = 0; true; i++)
-        if (lines[i] == "States:")
-            return i;
+    for (int index = 0; true; ++index) {
+        if (lines[index] == "States:") {
+            return index;
+        }
+    }
 }
 
 int Input::findTrans() const {
-    for (int i = 0; true; i++)
-        if (lines[i] == "Transitions:")
-            return i;
+    for (int index = 0; true; ++index) {
+        if (lines[index] == "Transitions:") {
+            return index;
+        }
+    }
 }
 
 int Input::findSigma() const {
-    for (int i = 0; true; i++)
-        if (lines[i] == "Sigma:")
-            return i;
+    for (int index = 0; true; ++index) {
+        if (lines[index] == "Sigma:") {
+            return index;
+        }
+    }
 }
 
-void Input::matrix(string copy[]) const {
-    for (int i = 0; i < n; i++)
-        copy[i] = lines[i];
+void Input::matrix(std::string copy[]) const {
+    for (int index = 0; index < kLineCount; ++index) {
+        copy[index] = lines[index];
+    }
 }
 
-ostream &operator<<(ostream &os, const Input &a) {
-    os << "About input\n";
-    os << "States begin at line: " << a.findState() << "\n";
-    os << "Sigma begins at line: " << a.findSigma() << "\n";
-    os << "Transitions begin at line: " << a.findTrans() << "\n";
-    return os;
+std::ostream &operator<<(std::ostream &output, const Input &input) {
+    output << "About input\n";
+    output << "States begin at line: " << input.findState() << "\n";
+    output << "Sigma begins at line: " << input.findSigma() << "\n";
+    output << "Transitions begin at line: " << input.findTrans() << "\n";
+    return output;
 }
 
 Input &Input::operator=(const Input &other) {
-    for (int i = 0; i < n; i++)
-        this->lines[i] = other.lines[i];
+    for (int index = 0; index < kLineCount; ++index) {
+        this->lines[index] = other.lines[index];
+    }
     return *this;
 }
 
 Input::Input(const Input &other) {
-    for (int i = 0; i < n; i++)
-        this->lines[i] = other.lines[i];
+    for (int index = 0; index < kLineCount; ++index) {
+        this->lines[index] = other.lines[index];
+    }
 }
 
-Input::~Input() {
-}
+Input::~Input() = default;

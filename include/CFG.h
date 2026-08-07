@@ -11,31 +11,36 @@
 
 
 class CFG {
-    std::map<char, std::vector <std::vector<char>>> prod;
-    std::map<std::string, bool> temp;
-    char start{NULL};
+    std::map<char, std::vector<std::vector<char>>> productions;
+    std::map<std::string, bool> visitedStates;
+    char start{'\0'};
     std::set<char> terminals, nonTerminals;
 public:
     CFG() = default;
     explicit CFG(std::string &filename);
 
-    int numberOfNonTerminals(const std::string &current);
+    static int numberOfNonTerminals(const std::string &current);
 
     static bool terminal(char c);
 
     static int numberOfTerminals(const std::string &current);
 
-    void dfsGenerate(int maxLen, int maxCount, int &count, std::vector<std::string> &result, std::string current);
+    void generateFromCurrent(int maxLen, int maxCount, int &count,
+                             std::vector<std::string> &result,
+                             const std::string &current);
 
     std::vector<std::string> generate(int max, int count);
 
     static bool potential(const std::string &input, const std::string &target);
 
-    void dfsDerivation(const std::string &target, std::vector<std::string> &result, std::string &current, bool &isFound);
+    void deriveFromCurrent(const std::string &target,
+                           std::vector<std::string> &result,
+                           const std::string &current,
+                           bool &isFound);
 
-    std::vector<std::string> derivation(std::string target);
+    std::vector<std::string> derivation(const std::string& target);
 
-    bool recognize(std::string &target);
+    bool recognize(const std::string &target);
 };
 
 

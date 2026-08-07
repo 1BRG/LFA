@@ -4,354 +4,406 @@
 
 #include "../include/Automat.h"
 
-void Automat::dfs(bool &valid, char word[], int state, int position, int length) const {
-    if (valid)
+#include <cstring>
+
+void Automat::dfs(bool &isValid, char inputWord[], int currentState, int currentPosition, int wordLength) const {
+    if (isValid) {
         return;
-    if (position == length) {
-        if (S.isFinalState(state))
-            valid = true;
-        for (int i = 0; i < T.size(state); i++) {
-            char ch = T.character(state, i);
-            int node = T.node(state, i);
-            if (!valid && ch == '$')
-                dfs(valid, word, node, position, length);
+    }
+
+    if (currentPosition == wordLength) {
+        if (stateMachine.isFinalState(currentState)) {
+            isValid = true;
+        }
+
+        for (int index = 0; index < transitions.size(currentState); ++index) {
+            char symbol = transitions.character(currentState, index);
+            int nextState = transitions.node(currentState, index);
+            if (!isValid && symbol == '$') {
+                dfs(isValid, inputWord, nextState, currentPosition, wordLength);
+            }
         }
         return;
     }
-    for (int i = 0; i < T.size(state); i++) {
-        char ch = T.character(state, i);
-        int node = T.node(state, i);
-        if (!valid && (ch == word[position]))
-            dfs(valid, word, node, position + 1, length);
-        else if (!valid && ch == '$')
-            dfs(valid, word, node, position, length);
+
+    for (int index = 0; index < transitions.size(currentState); ++index) {
+        char symbol = transitions.character(currentState, index);
+        int nextState = transitions.node(currentState, index);
+        if (!isValid && symbol == inputWord[currentPosition]) {
+            dfs(isValid, inputWord, nextState, currentPosition + 1, wordLength);
+        } else if (!isValid && symbol == '$') {
+            dfs(isValid, inputWord, nextState, currentPosition, wordLength);
+        }
     }
 }
 
-Automat::Automat(char value): A(value), T(value), S(value) {}
+Automat::Automat(char value) : stateMachine(value), transitions(value), alphabet(value) {}
 
 Automat &Automat::operator=(const Automat &other) {
-    this->S = other.S;
-    this->T = other.T;
-    this->A = other.A;
+    this->stateMachine = other.stateMachine;
+    this->transitions = other.transitions;
+    this->alphabet = other.alphabet;
     this->ok = other.ok;
     return *this;
 }
 
 Automat::Automat(const Automat &other) {
-    this->S = other.S;
-    this->T = other.T;
-    this->A = other.A;
+    this->stateMachine = other.stateMachine;
+    this->transitions = other.transitions;
+    this->alphabet = other.alphabet;
     this->ok = other.ok;
 }
 
-void Automat::parseRegex(string &regex) {
-    for (int i = 0; regex[i]; i++) {
-        if (i != regex.length() - 1) {
-            if (!strchr("(|.", regex[i]) && !strchr("|*.+?)", regex[i + 1])) {
-                regex.insert(regex.begin() + i + 1, '.');
+void Automat::parseRegex(std::string &regex) {
+    for (int index = 0; regex[index]; ++index) {
+        if (index != regex.length() - 1) {
+            if (!strchr("(|.", regex[index]) && !strchr("|*.+?)", regex[index + 1])) {
+                regex.insert(regex.begin() + index + 1, '.');
             }
         }
     }
 }
 
-deque<string> Automat::postfixNotation(string &s) {
-    map<string, int> prec;
-    prec["+"] = prec["*"] = prec["?"] = 3;
-    prec["."] = 2;
-    prec["|"] = 1;
-    prec["("] = -1;
+std::deque<std::string> Automat::postfixNotation(const std::string &expression) {
+    std::map<std::string, int> precedence;
+    precedence["+"] = precedence["*"] = precedence["?"] = 3;
+    precedence["."] = 2;
+    precedence["|"] = 1;
+    precedence["("] = -1;
+
     long long number = 0;
-    deque<string> result, queue;
-    for (int i = 0; s[i]; i++) {
-        if (s[i] <= '9' && s[i] >= '0') {
-            while (s[i] <= '9' && s[i] >= '0') {
-                number = number * 10 + s[i] - '0';
-                i++;
+    std::deque<std::string> outputTokens;
+    std::deque<std::string> operatorStack;
+
+    for (int index = 0; expression[index]; ++index) {
+        if (expression[index] <= '9' && expression[index] >= '0') {
+            while (expression[index] <= '9' && expression[index] >= '0') {
+                number = number * 10 + expression[index] - '0';
+                ++index;
             }
-            i--;
-            result.push_back(to_string(number));
+            --index;
+            outputTokens.push_back(std::to_string(number));
             number = 0;
-        }
-        else if (s[i] <= 'z' && s[i] >= 'a') {
-            result.push_back(string(1, s[i]));
-        }
-        else {
-            string c;
-            c += s[i];
-            if (s[i] == '(')
-                queue.push_back(c);
-            else if (s[i] == ')') {
-                while (queue.back() != "(")
-                    result.push_back(queue.back()), queue.pop_back();
-                queue.pop_back();
-            }
-            else {
-                while (!queue.empty() && prec[c] <= prec[queue.back()])
-                    result.push_back(queue.back()), queue.pop_back();
-                queue.push_back(c);
+        } else if (expression[index] <= 'z' && expression[index] >= 'a') {
+            outputTokens.push_back(std::string(1, expression[index]));
+        } else {
+            std::string symbol;
+            symbol += expression[index];
+            if (expression[index] == '(') {
+                operatorStack.push_back(symbol);
+            } else if (expression[index] == ')') {
+                while (operatorStack.back() != "(") {
+                    outputTokens.push_back(operatorStack.back());
+                    operatorStack.pop_back();
+                }
+                operatorStack.pop_back();
+            } else {
+                while (!operatorStack.empty() && precedence[symbol] <= precedence[operatorStack.back()]) {
+                    outputTokens.push_back(operatorStack.back());
+                    operatorStack.pop_back();
+                }
+                operatorStack.push_back(symbol);
             }
         }
     }
-    while (!queue.empty())
-        result.push_back(queue.back()), queue.pop_back();
-    return result;
+
+    while (!operatorStack.empty()) {
+        outputTokens.push_back(operatorStack.back());
+        operatorStack.pop_back();
+    }
+    return outputTokens;
 }
 
-Automat::Automat(string &regex) {
+Automat::Automat(std::string &regex) {
     parseRegex(regex);
-    deque<string> q = postfixNotation(regex);
-    *this = toAutomat(q);
+    std::deque<std::string> tokens = postfixNotation(regex);
+    *this = toAutomat(tokens);
 }
 
-bool Automat::belongsToAutomaton(string &word) {
-    char c[2000];
-    strcpy(c, word.c_str());
-    return acceptsWord(c);
+bool Automat::belongsToAutomaton(const std::string &word) const {
+    char buffer[2000];
+    std::strcpy(buffer, word.c_str());
+    return acceptsWord(buffer);
 }
 
-Automat Automat::toAutomat(deque<string> p) {
-    deque<Automat> queue;
-    while (!p.empty()) {
-        string c = p.front();
-        p.pop_front();
-        if ((c[0] >= '0' && c[0] <= '9') || (c[0] <= 'z' && c[0] >= 'a')) {
-            Automat aux(c[0]);
-            queue.push_back(aux);
-        }
-        else {
-            Automat second = queue.back();
-            queue.pop_back();
-            if (c[0] == '.') {
-                Automat first = queue.back();
-                queue.pop_back();
-                first.concatenate(second);
-                queue.push_back(first);
-            }
-            else if (c[0] == '|') {
-                Automat first = queue.back();
-                queue.pop_back();
-                first.alternate(second);
-                queue.push_back(first);
-            }
-            else if (c[0] == '*') {
-                second.star();
-                queue.push_back(second);
-            }
-            else if (c[0] == '+') {
-                second.plus();
-                queue.push_back(second);
-            }
-            else if (c[0] == '?') {
-                second.optional();
-                queue.push_back(second);
-            }
-            else {
-                cout << "Unexpected operator.\n";
+Automat Automat::toAutomat(std::deque<std::string> tokens) {
+    std::deque<Automat> automatonStack;
+    while (!tokens.empty()) {
+        std::string currentToken = tokens.front();
+        tokens.pop_front();
+
+        if ((currentToken[0] >= '0' && currentToken[0] <= '9') ||
+            (currentToken[0] <= 'z' && currentToken[0] >= 'a')) {
+            Automat automaton(currentToken[0]);
+            automatonStack.push_back(automaton);
+        } else {
+            Automat secondAutomaton = automatonStack.back();
+            automatonStack.pop_back();
+
+            if (currentToken[0] == '.') {
+                Automat firstAutomaton = automatonStack.back();
+                automatonStack.pop_back();
+                firstAutomaton.concatenate(secondAutomaton);
+                automatonStack.push_back(firstAutomaton);
+            } else if (currentToken[0] == '|') {
+                Automat firstAutomaton = automatonStack.back();
+                automatonStack.pop_back();
+                firstAutomaton.alternate(secondAutomaton);
+                automatonStack.push_back(firstAutomaton);
+            } else if (currentToken[0] == '*') {
+                secondAutomaton.star();
+                automatonStack.push_back(secondAutomaton);
+            } else if (currentToken[0] == '+') {
+                secondAutomaton.plus();
+                automatonStack.push_back(secondAutomaton);
+            } else if (currentToken[0] == '?') {
+                secondAutomaton.optional();
+                automatonStack.push_back(secondAutomaton);
+            } else {
+                std::cout << "Unexpected operator.\n";
             }
         }
     }
-    return queue.back();
+    return automatonStack.back();
 }
 
-Automat::Automat(const Input &input): S(input), A(input) {
-    T = Transitions{input, S, A};
+Automat::Automat(const Input &input) : stateMachine(input), alphabet(input) {
+    transitions = Transitions{input, stateMachine, alphabet};
     bool isValid = true;
-    isValid = isValid & S.validStates() & A.validSigma() & T.validTransitions();
-    if (!isValid)
-        cout << "Automaton is invalid\n", this->ok = false;
+    isValid = isValid & stateMachine.validStates() & alphabet.validSigma() & transitions.validTransitions();
+    if (!isValid) {
+        std::cout << "Automaton is invalid\n";
+        this->ok = false;
+    }
 }
 
-Automat::Automat(const States &state, const Sigma &sigma, const Transitions &trans): S(state), T(trans), A(sigma) {
+Automat::Automat(const States &state, const Sigma &sigma, const Transitions &trans)
+    : stateMachine(state), transitions(trans), alphabet(sigma) {
     bool isValid = true;
     isValid = isValid & state.validStates() & sigma.validSigma() & trans.validTransitions();
-    if (!isValid)
-        cout << "Automaton is invalid\n", this->ok = false;
+    if (!isValid) {
+        std::cout << "Automaton is invalid\n";
+        this->ok = false;
+    }
 }
 
-bool Automat::acceptsWord(char word[]) {
-    bool valid = false;
-    dfs(valid, word, S.startNode(), 0, strlen(word));
-    return valid;
+bool Automat::acceptsWord(char word[]) const {
+    bool isValid = false;
+    dfs(isValid, word, stateMachine.startNode(), 0, std::strlen(word));
+    return isValid;
 }
 
-bool Automat::isValid() { return ok; }
-bool Automat::isDFA() const { return T.isDFA(); }
-bool Automat::isNFA() const { return T.isNFA(); }
+bool Automat::isValid() const { return ok; }
+bool Automat::isDFA() const { return transitions.isDFA(); }
+bool Automat::isNFA() const { return transitions.isNFA(); }
 
 void Automat::toDFA() {
     toNFA();
-    if (T.isDFA() == true)
+    if (transitions.isDFA() == true) {
         return;
-    bool auxf[n];
-    for (int i = 0; i < n; i++)
-        auxf[i] = 0;
-    auxf[S.startNode()] = S.isFinalState(S.startNode());
-    vector<TransitionNode> aux[n];
-    map<char, set<int> > w[n];
-    T.getTransition(w);
-
-    map<long long, map<char, set<int> > > hash;
-    map<long long, bool> visited;
-    map<long long, int> translation;
-
-    const int base = 5009, mod = 1e9 + 7;
-    int count = 0;
-    deque<long long> q;
-    q.push_back(S.startNode());
-
-    for (int i = 0; i < n; i++) {
-        if (!w[i].empty())
-            hash[i] = w[i], w[i].clear();
     }
 
-    hash[S.startNode()][1].insert(S.startNode());
-    translation[S.startNode()] = ++count;
+    bool finalStateFlags[kNodeLimit];
+    for (bool & finalStateFlag : finalStateFlags) {
+        finalStateFlag = false;
+    }
+    finalStateFlags[stateMachine.startNode()] = stateMachine.isFinalState(stateMachine.startNode());
 
-    while (!q.empty()) {
-        int node = q.front();
-        q.pop_front();
-        visited[node] = true;
-        map<char, set<int> > destination;
-        for (set<int>::iterator i = hash[node][1].begin(); i != hash[node][1].end(); i++)
-            for (map<char, set<int> >::iterator j = hash[*i].begin(); j != hash[*i].end(); j++) {
-                if (j->first != 1)
-                    destination[j->first].insert(j->second.begin(), j->second.end());
+    std::vector<TransitionNode> componentTransitions[kNodeLimit];
+    std::map<char, std::set<int>> transitionTable[kNodeLimit];
+    transitions.getTransition(transitionTable);
+
+    std::map<long long, std::map<char, std::set<int>>> componentMap;
+    std::map<long long, bool> visitedComponents;
+    std::map<long long, int> componentIds;
+
+    const int base = 5009;
+    const int mod = 1e9 + 7;
+    int count = 0;
+    std::deque<long long> stateQueue;
+    stateQueue.push_back(stateMachine.startNode());
+
+    for (int index = 0; index < kNodeLimit; ++index) {
+        if (!transitionTable[index].empty()) {
+            componentMap[index] = transitionTable[index];
+            transitionTable[index].clear();
+        }
+    }
+
+    componentMap[stateMachine.startNode()][1].insert(stateMachine.startNode());
+    componentIds[stateMachine.startNode()] = ++count;
+
+    while (!stateQueue.empty()) {
+        int currentNode = stateQueue.front();
+        stateQueue.pop_front();
+        visitedComponents[currentNode] = true;
+
+        std::map<char, std::set<int>> destination;
+        for (auto it = componentMap[currentNode][1].begin(); it != componentMap[currentNode][1].end(); ++it) {
+            for (auto & transitionIt : componentMap[*it]) {
+                if (transitionIt.first != 1) {
+                    destination[transitionIt.first].insert(transitionIt.second.begin(), transitionIt.second.end());
+                }
             }
-        for (map<char, set<int> >::iterator i = destination.begin(); i != destination.end(); i++) {
+        }
+
+        for (auto it = destination.begin(); it != destination.end(); ++it) {
             long long state = 0;
             bool isFinal = false;
-            for (set<int>::iterator j = i->second.begin(); j != i->second.end(); j++) {
-                isFinal = isFinal | S.isFinalState(*j);
-                state *= base, state += *j, state %= mod;
+            for (int transitionIt : it->second) {
+                isFinal = isFinal | stateMachine.isFinalState(transitionIt);
+                state *= base;
+                state += transitionIt;
+                state %= mod;
             }
-            state += n + 1;
-            if (visited[state] == 0) {
-                hash[state][1].insert(destination[i->first].begin(), destination[i->first].end());
-                hash[node][i->first] = destination[i->first];
-                visited[state] = 1;
-                q.push_back(state);
-                translation[state] = ++count;
-                aux[translation[node]].push_back({count, i->first});
+            state += kNodeLimit + 1;
+
+            if (visitedComponents[state] == 0) {
+                componentMap[state][1].insert(destination[it->first].begin(), destination[it->first].end());
+                componentMap[currentNode][it->first] = destination[it->first];
+                visitedComponents[state] = true;
+                stateQueue.push_back(state);
+                componentIds[state] = ++count;
+                componentTransitions[componentIds[currentNode]].push_back({count, it->first});
             } else {
-                aux[translation[node]].push_back({translation[state], i->first});
-                hash[state][i->first] = destination[i->first];
+                componentTransitions[componentIds[currentNode]].push_back({componentIds[state], it->first});
+                componentMap[state][it->first] = destination[it->first];
             }
         }
     }
-    for (map<long long, int>::iterator i = translation.begin(); i != translation.end(); i++) {
-        cout << "Component of node " << i->second << ":\n";
+
+    for (auto & componentId : componentIds) {
+        std::cout << "Component of node " << componentId.second << ":\n";
         bool isFinal = false;
-        for (map<char, set<int> >::iterator j = hash[i->first].begin(); j != hash[i->first].end(); j++) {
-            cout << j->first << ":   ";
-            for (set<int>::iterator p = j->second.begin(); p != j->second.end(); p++) {
-                cout << *p << " ";
-                isFinal = isFinal | S.isFinalState(*p);
+        for (auto transitionIt = componentMap[componentId.first].begin(); transitionIt != componentMap[componentId.first].end(); ++transitionIt) {
+            std::cout << transitionIt->first << ":   ";
+            for (const int stateIt : transitionIt->second) {
+                std::cout << stateIt << " ";
+                isFinal = isFinal | stateMachine.isFinalState(stateIt);
             }
-            auxf[i->second] = isFinal;
-            cout << ((isFinal == 1) ? "final" : "") << "\n";
+            finalStateFlags[componentId.second] = isFinal;
+            std::cout << ((isFinal == 1) ? "final" : "") << "\n";
             break;
         }
-        cout << "\n";
+        std::cout << "\n";
     }
-    S = {States{1, auxf}};
-    T.modifyTransitions(aux);
+
+    stateMachine = {States{1, finalStateFlags}};
+    transitions.modifyTransitions(componentTransitions);
 }
 
-ostream &operator<<(ostream &os, const Automat &a) {
-    os << "About the automaton: \n";
-    os << a.S << "\n" << a.T << "\n";
-    return os;
+std::ostream &operator<<(std::ostream &output, const Automat &automaton) {
+    output << "About the automaton: \n";
+    output << automaton.stateMachine << "\n" << automaton.transitions << "\n";
+    return output;
 }
 
-void Automat::returnNfa(int node, bool visited[], vector<TransitionNode> &aux, vector<TransitionNode> transitions[], bool &isFinal) {
+void Automat::returnNfa(int node, bool visited[], std::vector<TransitionNode> &aux,
+                        std::vector<TransitionNode> transitions[], bool &isFinal) {
     visited[node] = true;
-    if (S.isFinalState(node))
+    if (stateMachine.isFinalState(node)) {
         isFinal = true;
-    for (int i = 0; i < transitions[node].size(); i++)
-        if (visited[transitions[node][i].node] == false) {
-            if (transitions[node][i].symbol != '$') {
-                visited[transitions[node][i].node] = true;
-                aux.push_back(transitions[node][i]);
+    }
+
+    for (int index = 0; index < transitions[node].size(); ++index) {
+        if (visited[transitions[node][index].node] == false) {
+            if (transitions[node][index].symbol != '$') {
+                visited[transitions[node][index].node] = true;
+                aux.push_back(transitions[node][index]);
+            } else {
+                returnNfa(transitions[node][index].node, visited, aux, transitions, isFinal);
             }
-            else {
-                returnNfa(transitions[node][i].node, visited, aux, transitions, isFinal);
-            }
+        } else if (transitions[node][index].symbol != '$') {
+            visited[transitions[node][index].node] = false;
+            aux.push_back(transitions[node][index]);
         }
-        else if (transitions[node][i].symbol != '$') {
-            visited[transitions[node][i].node] = false;
-            aux.push_back(transitions[node][i]);
-        }
+    }
 }
 
 void Automat::toNFA() {
-    vector<TransitionNode> *transitions;
-    vector<TransitionNode> newTransitions[n];
-    vector<int> finalStates;
-    transitions = T.getTransitions();
-    bool visited[n] = {false};
-    for (int i = 0; i < n; i++) {
+    std::vector<TransitionNode> normalizedTransitions[kNodeLimit];
+    std::vector<int> finalStateList;
+    std::vector<TransitionNode> *transitionList = transitions.getTransitions();
+    bool visited[kNodeLimit] = {false};
+
+    for (int index = 0; index < kNodeLimit; ++index) {
         bool isFinal = false;
-        memset(visited, 0, sizeof(visited));
-        vector<TransitionNode> aux;
-        returnNfa(i, visited, aux, transitions, isFinal);
-        newTransitions[i] = aux;
-        if (isFinal)
-            finalStates.push_back(i);
+        std::memset(visited, 0, sizeof(visited));
+        std::vector<TransitionNode> aux;
+        returnNfa(index, visited, aux, transitionList, isFinal);
+        normalizedTransitions[index] = aux;
+        if (isFinal) {
+            finalStateList.push_back(index);
+        }
     }
-    T.modifyTransitions(newTransitions);
-    S.changeFinalStates(finalStates);
+
+    transitions.modifyTransitions(normalizedTransitions);
+    stateMachine.changeFinalStates(finalStateList);
 }
 
-void Automat::increaseN(int n) { T.increaseN(n); S.increaseN(n); }
-vector<TransitionNode> *Automat::getTransitions() { return T.getTransitions(); }
-vector<int> Automat::initialStates() { return S.initialStates(); }
-vector<int> Automat::finalStates() { return S.finalStates(); }
+void Automat::increaseN(int count) {
+    transitions.increaseN(count);
+    stateMachine.increaseN(count);
+}
+
+std::vector<TransitionNode> *Automat::getTransitions() {
+    return transitions.getTransitions();
+}
+
+std::vector<int> Automat::initialStates() {
+    return stateMachine.initialStates();
+}
+
+std::vector<int> Automat::finalStates() {
+    return stateMachine.finalStates();
+}
 
 void Automat::concatenate(Automat &other) {
-    other.increaseN(S.size());
-    T.addTransitions(other.getTransitions());
-    T.addTransitions(S.finalStates(), other.initialStates());
-    S.changeFinalStates(other.finalStates());
-    S.updateNodeCount(other.s().size() - S.size());
+    other.increaseN(stateMachine.size());
+    transitions.addTransitions(other.getTransitions());
+    transitions.addTransitions(stateMachine.finalStates(), other.initialStates());
+    stateMachine.changeFinalStates(other.finalStates());
+    stateMachine.updateNodeCount(other.states().size() - stateMachine.size());
 }
 
 void Automat::alternate(Automat &other) {
     increaseN(1);
-    other.increaseN(S.size());
-    T.addTransitions(other.getTransitions());
-    T.addTransitions({1}, {S.initialStates()[0], other.initialStates()[0]});
-    S.changeInitialState(1);
-    vector<int> v = S.finalStates();
-    vector<int> p = other.finalStates();
-    for (int i = 0; i < p.size(); i++)
-        v.push_back(p[i]);
-    S.changeFinalStates(v);
-    S.updateNodeCount(other.s().size() - S.size());
+    other.increaseN(stateMachine.size());
+    transitions.addTransitions(other.getTransitions());
+    transitions.addTransitions({1}, {stateMachine.initialStates()[0], other.initialStates()[0]});
+    stateMachine.changeInitialState(1);
+
+    std::vector<int> states = stateMachine.finalStates();
+    std::vector<int> otherStates = other.finalStates();
+    for (int otherState : otherStates) {
+        states.push_back(otherState);
+    }
+    stateMachine.changeFinalStates(states);
+    stateMachine.updateNodeCount(other.states().size() - stateMachine.size());
 }
 
 void Automat::star() {
     increaseN(1);
-    T.addTransitions(S.finalStates(), {1});
-    T.addTransitions({1}, S.initialStates());
-    S.changeFinalStates({1});
-    S.changeInitialState(1);
+    transitions.addTransitions(stateMachine.finalStates(), {1});
+    transitions.addTransitions({1}, stateMachine.initialStates());
+    stateMachine.changeFinalStates({1});
+    stateMachine.changeInitialState(1);
 }
 
 void Automat::plus() {
     increaseN(1);
-    T.addTransitions(S.finalStates(), {1});
-    T.addTransitions({1}, S.initialStates());
-    S.changeInitialState(1);
+    transitions.addTransitions(stateMachine.finalStates(), {1});
+    transitions.addTransitions({1}, stateMachine.initialStates());
+    stateMachine.changeInitialState(1);
 }
 
 void Automat::optional() {
     increaseN(1);
-    T.addTransitions({1}, S.initialStates());
-    vector<int> v = S.finalStates();
-    v.push_back(1);
-    S.changeFinalStates(v);
-    S.changeInitialState(1);
+    transitions.addTransitions({1}, stateMachine.initialStates());
+    std::vector<int> states = stateMachine.finalStates();
+    states.push_back(1);
+    stateMachine.changeFinalStates(states);
+    stateMachine.changeInitialState(1);
 }
 
-Automat::~Automat() {}
+Automat::~Automat() = default;
